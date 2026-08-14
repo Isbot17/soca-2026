@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOCA · Faculty Portal</title>
+<link rel="icon" type="image/jpeg" href="images/svc-logo.jpg">
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  /* --- NEW FORM DESIGN STYLES --- */
+  .main-content { background-color: #f8fafc; padding: 30px; }
+  
+  .section-card { 
+    background: white; 
+    border: 1px solid #e5e7eb; 
+    border-radius: 12px; 
+    padding: 24px 30px; 
+    margin-bottom: 24px; 
+    box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+  }
+  
+  .section-title { 
+    font-size: 18px; 
+    font-weight: 600; 
+    margin-bottom: 24px; 
+    color: #111827; 
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
+  .form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; margin-bottom: 24px; }
+  .form-grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 24px; margin-bottom: 24px; }
+  
+  .form-group label { 
+    display: block; 
+    font-size: 13.5px; 
+    font-weight: 500; 
+    margin-bottom: 8px; 
+    color: #374151; 
+  }
+  
+  .required { color: #ef4444; }
+  
+  .form-control { 
+    width: 100%; 
+    padding: 12px 14px; 
+    border: 1px solid #d1d5db; 
+    border-radius: 8px; 
+    font-size: 14px;
+    color: #111827;
+    background: #fff;
+    outline: none; 
+    transition: all 0.2s; 
+  }
+  
+  .form-control:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.1); }
+  .form-control::placeholder { color: #9ca3af; }
+  
+  textarea.form-control { resize: vertical; min-height: 120px; }
+  
+  .char-counter { text-align: right; font-size: 12px; color: #6b7280; margin-top: 6px; }
+
+  /* --- ATTACHMENTS GRID --- */
+  .attachments-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+  }
+
+  .upload-box {
+    border: 1px dashed #d1d5db;
+    border-radius: 10px;
+    padding: 24px 16px;
+    text-align: center;
+    background: #f9fafb;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .upload-box:hover { border-color: var(--primary); background: #f0fdf4; }
+  .upload-box h4 { font-size: 13.5px; margin: 0 0 12px 0; color: #374151; }
+  
+  .upload-btn {
+    background: white;
+    border: 1px solid #d1d5db;
+    padding: 6px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--primary);
+    font-weight: 500;
+    pointer-events: none;
+  }
+
+  .file-name-display {
+    font-size: 12px;
+    color: var(--primary);
+    margin-top: 12px;
+    font-weight: 500;
+    word-break: break-all;
+  }
+
+  /* --- BOTTOM ACTIONS --- */
+  .form-actions { display: flex; justify-content: flex-end; gap: 16px; margin-top: 24px; }
+  .btn-cancel { background: white; border: 1px solid #d1d5db; color: #374151; font-weight: 500; padding: 12px 24px; }
+  .btn-cancel:hover { background: #f3f4f6; }
+  .btn-submit { padding: 12px 32px; font-weight: 500; font-size: 15px; }
+
+  .edit-badge {
+    background: #fef08a; color: #854d0e; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold; display: none;
+  }
+
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <div id="sidebar-placeholder"></div>
+
+  <div class="main-wrapper">
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 style="margin: 0; font-size: 20px; color: #111827;">New Application</h1>
+        <div class="breadcrumb">
+          <a href="#">Dashboard</a><span class="sep">/</span><a href="#">Applications</a><span class="sep">/</span><span class="current">New Application</span>
+        </div>
+      </div>
+      <div class="topbar-actions"></div>
+    </header>
+
+    <main class="main-content">
+      
+      <!-- APPLICATION INFORMATION SECTION -->
+      <div class="section-card">
+        <div class="section-title">
+          Application Information
+          <span id="edit-indicator" class="edit-badge">EDITING MODE</span>
+        </div>
+        
+        <div class="form-grid-2">
+          <div class="form-group">
+            <label>Title of Activity <span class="required">*</span></label>
+            <input type="text" id="app-title" class="form-control" placeholder="Enter the title of the activity">
+          </div>
+          <div class="form-group">
+            <label>Type of Activity <span class="required">*</span></label>
+            <select id="app-type" class="form-control">
+              <option value="" disabled selected>Select type</option>
+              <option>Seminar</option>
+              <option>Workshop</option>
+              <option>Competition</option>
+              <option>Outreach</option>
+              <option>Event</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 24px;">
+          <label>Purpose / Description <span class="required">*</span></label>
+          <textarea id="app-purpose" class="form-control" placeholder="Describe the purpose and details of the activity" maxlength="500" onkeyup="document.getElementById('char-count').innerText = this.value.length"></textarea>
+          <div class="char-counter"><span id="char-count">0</span> / 500</div>
+        </div>
+
+        <div class="form-grid-4">
+          <div class="form-group">
+            <label>Start Date <span class="required">*</span></label>
+            <input type="date" id="app-start-date" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>End Date <span class="required">*</span></label>
+            <input type="date" id="app-end-date" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>Start Time <span class="required">*</span></label>
+            <input type="time" id="app-start-time" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>End Time <span class="required">*</span></label>
+            <input type="time" id="app-end-time" class="form-control">
+          </div>
+        </div>
+
+        <div class="form-grid-3" style="margin-bottom: 0;">
+          <div class="form-group">
+            <label>Venue / Location <span class="required">*</span></label>
+            <input type="text" id="app-venue" class="form-control" placeholder="Enter venue or location">
+          </div>
+          <div class="form-group">
+            <label>Number of Participants <span class="required">*</span></label>
+            <input type="number" id="app-participants" class="form-control" placeholder="Enter number of participants">
+          </div>
+          <div class="form-group">
+            <label>Organization <span class="required">*</span></label>
+            <!-- DROPDOWN WILL BE POPULATED DYNAMICALLY -->
+            <select id="app-org" class="form-control">
+              <option value="" disabled selected>Loading organizations...</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- ATTACHMENTS SECTION -->
+      <div class="section-card">
+        <div class="section-title" style="margin-bottom: 8px;">Attachments</div>
+        <p style="font-size: 13px; color: #6b7280; margin-top: 0; margin-bottom: 20px;">Upload required documents (PDF, JPG, PNG - Max 10MB each). <span id="edit-hint" style="display:none; color:var(--primary); font-weight:bold;">Leave file boxes blank to keep your existing documents.</span></p>
+        
+        <div class="attachments-grid">
+          
+          <!-- Box 1: Proposal -->
+          <div class="upload-box" onclick="document.getElementById('file-proposal').click()">
+            <h4>Activity Proposal <span class="required">*</span></h4>
+            <svg class="upload-icon" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <div class="upload-btn">Upload file</div>
+            <input type="file" id="file-proposal" style="display:none;" onchange="window.updateFileName(this, 'name-proposal')">
+            <div id="name-proposal" class="file-name-display"></div>
+          </div>
+
+          <!-- Box 2: Itinerary -->
+          <div class="upload-box" onclick="document.getElementById('file-itinerary').click()">
+            <h4>Itinerary</h4>
+            <svg class="upload-icon" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <div class="upload-btn">Upload file</div>
+            <input type="file" id="file-itinerary" style="display:none;" onchange="window.updateFileName(this, 'name-itinerary')">
+            <div id="name-itinerary" class="file-name-display"></div>
+          </div>
+
+          <!-- Box 3: Participants -->
+          <div class="upload-box" onclick="document.getElementById('file-participants').click()">
+            <h4>List of Participants <span class="required">*</span></h4>
+            <svg class="upload-icon" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <div class="upload-btn">Upload file</div>
+            <input type="file" id="file-participants" style="display:none;" onchange="window.updateFileName(this, 'name-participants')">
+            <div id="name-participants" class="file-name-display"></div>
+          </div>
+
+          <!-- Box 4: Other -->
+          <div class="upload-box" onclick="document.getElementById('file-other').click()">
+            <h4>Other Documents (if any)</h4>
+            <svg class="upload-icon" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <div class="upload-btn">Upload file</div>
+            <input type="file" id="file-other" style="display:none;" onchange="window.updateFileName(this, 'name-other')">
+            <div id="name-other" class="file-name-display"></div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Hidden Email Config -->
+      <input type="hidden" id="app-email">
+
+      <!-- ACTION BUTTONS -->
+      <div class="form-actions">
+        <button class="btn btn-cancel" onclick="window.location.reload()">Cancel</button>
+        <button class="btn btn-submit" id="submit-btn" onclick="window.submitApplication(this)">Submit Application</button>
+      </div>
+
+      <!-- MY HISTORY -->
+      <div class="section-card" style="margin-top: 40px; border-top: 4px solid var(--primary);">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div class="section-title" style="margin:0;">My Recent Applications</div>
+          <a href="#" style="font-size: 13px; color: var(--primary); text-decoration: none; font-weight:500;" onclick="window.loadMyHistory(); return false;">Refresh List</a>
+        </div>
+        <table style="width: 100%; border-collapse: collapse; font-size: 13.5px; margin-top: 16px;">
+          <thead>
+            <tr style="border-bottom: 1px solid var(--border); text-align: left; color: #6b7280;">
+              <th style="padding: 12px 8px; font-weight: 500;">Activity Info</th>
+              <th style="padding: 12px 8px; font-weight: 500;">Date</th>
+              <th style="padding: 12px 8px; font-weight: 500; text-align:right;">Status</th>
+              <th style="padding: 12px 8px; font-weight: 500; text-align:center;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="my-history-table"></tbody>
+        </table>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script>
+{
+  const supabaseUrl = 'https://xhxwsjdtpbxosqwzmfsk.supabase.co';
+  const supabaseKey = 'sb_publishable_CYvnSlv4LAbXLW0sNu_qeA_PNA6vhxU';
+  
+  if (!window.db) {
+      window.db = supabase.createClient(supabaseUrl, supabaseKey);
+  }
+
+  let currentUserName = '';
+  let currentUserEmail = '';
+  
+  // GLOBAL VARIABLE to track if we are Editing or Creating
+  let editingAppId = null; 
+
+  // Fetch Organizations dynamically from DB
+  window.loadOrganizationsDropdown = async function() {
+    const select = document.getElementById('app-org');
+    const { data, error } = await window.db.from('organizations').select('*').order('name', { ascending: true });
+    
+    if (!error && data) {
+      let optionsHtml = '<option value="" disabled selected>Select Organization...</option>';
+      data.forEach(org => {
+        optionsHtml += `<option value="${org.name}">${org.name}</option>`;
+      });
+      select.innerHTML = optionsHtml;
+    } else {
+      select.innerHTML = '<option value="" disabled>Error loading organizations</option>';
+    }
+  };
+
+  // Handle showing the file name in the custom upload boxes
+  window.updateFileName = function(inputElement, displayElementId) {
+    const display = document.getElementById(displayElementId);
+    if (inputElement.files.length > 0) {
+      display.innerText = inputElement.files[0].name;
+    } else {
+      display.innerText = "";
+    }
+  };
+
+  // 1. Authenticate user
+  window.checkAuth = function() {
+    const userStr = localStorage.getItem('currentUser');
+    if (!userStr) {
+      window.location.href = 'index.html'; 
+      return;
+    }
+    const user = JSON.parse(userStr);
+    currentUserName = user.name;
+    currentUserEmail = user.email;
+    
+    document.getElementById('app-email').value = currentUserEmail;
+    
+    // Call our new functions to load data
+    window.loadOrganizationsDropdown();
+    window.loadMyHistory();
+  };
+
+  // 2. Load History
+  window.loadMyHistory = async function() {
+    const tbody = document.getElementById('my-history-table');
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#6b7280;">Loading history...</td></tr>';
+
+    const { data, error } = await window.db.from('applications')
+      .select('*') 
+      .eq('applicant_name', currentUserName)
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    if (error || !data || data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#6b7280;">No applications found.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = '';
+    data.forEach(app => {
+      const date = new Date(app.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      
+      let badgeClass = 'badge-gray';
+      const s = (app.status || '').toLowerCase();
+      
+      if(s === 'approved') badgeClass = 'badge-success';
+      if(s === 'pending staff review' || s === 'pending admin approval') badgeClass = 'badge-warning';
+      if(s === 'disapproved' || s === 'needs clarification' || s === 'need clarification') badgeClass = 'badge-danger';
+
+      let actionBtn = '-';
+      if(s === 'needs clarification' || s === 'need clarification') {
+        actionBtn = `<button class="btn btn-outline" style="padding: 6px 12px; font-size:12px; border-color:var(--primary); color:var(--primary);" onclick="window.loadApplicationForEdit(${app.id})">Edit & Resubmit</button>`;
+      }
+
+      let remarksHtml = '';
+      if (app.remarks && app.remarks.trim() !== '') {
+        remarksHtml = `<div style="margin-top: 4px; font-size: 12px; color: #b91c1c; background: #fef2f2; padding: 6px 10px; border-radius: 6px; border: 1px solid #f87171;"><b>Feedback:</b> ${app.remarks}</div>`;
+      }
+
+      tbody.innerHTML += `
+        <tr style="border-bottom: 1px solid var(--border);">
+          <td style="padding: 12px 8px; font-weight:500;">
+            ${app.title || 'Untitled'}
+            ${remarksHtml}
+          </td>
+          <td style="padding: 12px 8px; color:#6b7280;">${date}</td>
+          <td style="padding: 12px 8px; text-align:right;"><span class="badge ${badgeClass}">${app.status || 'Pending Staff Review'}</span></td>
+          <td style="padding: 12px 8px; text-align:center;">${actionBtn}</td>
+        </tr>
+      `;
+    });
+  };
+
+// 3. EDIT MODE: Load Application Data and Documents into Form
+  window.loadApplicationForEdit = async function(id) {
+    // A. Fetch main application data
+    const { data: appData, error: appError } = await window.db.from('applications').select('*').eq('id', id).single();
+    if(appError) {
+      alert("Error fetching application details: " + appError.message);
+      return;
+    }
+
+    editingAppId = id; // Set global flag
+
+    // Populate all text/date/time fields
+    document.getElementById('app-title').value = appData.title || '';
+    document.getElementById('app-type').value = appData.type || '';
+    document.getElementById('app-purpose').value = appData.purpose || '';
+    document.getElementById('app-start-date').value = appData.start_date || '';
+    document.getElementById('app-end-date').value = appData.end_date || '';
+    document.getElementById('app-start-time').value = appData.start_time || '';
+    document.getElementById('app-end-time').value = appData.end_time || '';
+    document.getElementById('app-venue').value = appData.venue || '';
+    document.getElementById('app-participants').value = appData.participants || '';
+    
+    // Make sure to load the organization correctly if it exists in the new dynamic dropdown
+    const orgSelect = document.getElementById('app-org');
+    let optionExists = Array.from(orgSelect.options).some(option => option.value === appData.organization);
+    
+    // If the org from DB doesn't exist in the current dropdown (e.g. it was deleted), add it temporarily
+    if (!optionExists && appData.organization) {
+       const newOption = new Option(appData.organization, appData.organization, true, true);
+       orgSelect.add(newOption);
+    }
+    orgSelect.value = appData.organization || '';
+    
+    document.getElementById('char-count').innerText = (appData.purpose || '').length;
+
+    // B. Clear previous file names 
+    document.getElementById('name-proposal').innerHTML = '';
+    document.getElementById('name-itinerary').innerHTML = '';
+    document.getElementById('name-participants').innerHTML = '';
+    document.getElementById('name-other').innerHTML = '';
+
+    // C. Fetch associated documents from the documents table
+    const { data: docsData, error: docsError } = await window.db.from('documents').select('*').eq('application_id', id);
+    
+    if (!docsError && docsData) {
+      docsData.forEach(doc => {
+        let displayId = '';
+        if (doc.document_type === 'Activity Proposal') displayId = 'name-proposal';
+        else if (doc.document_type === 'Itinerary') displayId = 'name-itinerary';
+        else if (doc.document_type === 'List of Participants') displayId = 'name-participants';
+        else if (doc.document_type === 'Other Documents') displayId = 'name-other';
+
+        if (displayId && doc.file_url) {
+          document.getElementById(displayId).innerHTML = `
+            <a href="${doc.file_url}" target="_blank" style="color:var(--primary); text-decoration:underline; font-size: 13px; font-weight: bold; pointer-events: auto;">
+              ✓ File Attached (View)
+            </a>`;
+        }
+      });
+    }
+
+    // Update UI to reflect Editing State
+    document.getElementById('submit-btn').innerText = "Resubmit Application";
+    document.getElementById('edit-indicator').style.display = "inline-block";
+    document.getElementById('edit-hint').style.display = "inline";
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  async function uploadFileToSupabase(inputId, prefix, title) {
+    const fileInput = document.getElementById(inputId);
+    const file = fileInput.files[0];
+    if (!file) return null;
+
+    const fileExt = file.name.split('.').pop();
+    const uniqueFileName = `${Date.now()}_${prefix}_${title.replace(/\s+/g, '_')}.${fileExt}`;
+    
+    const { error: uploadError } = await window.db.storage.from('requirements').upload(uniqueFileName, file);
+    if (uploadError) throw uploadError;
+
+    const { data } = window.db.storage.from('requirements').getPublicUrl(uniqueFileName);
+    return data.publicUrl;
+  }
+
+  async function replaceDocumentRecord(appId, docType, newUrl) {
+    if (!newUrl) return; 
+    
+    await window.db.from('documents').delete().match({ application_id: appId, document_type: docType });
+    await window.db.from('documents').insert({ application_id: appId, document_type: docType, file_url: newUrl });
+  }
+
+  // 4. Submit or Update Application
+  window.submitApplication = async function(btn) {
+    const title = document.getElementById('app-title').value.trim();
+    const type = document.getElementById('app-type').value;
+    const org = document.getElementById('app-org').value;
+    const purpose = document.getElementById('app-purpose').value.trim();
+    const startDate = document.getElementById('app-start-date').value;
+    const endDate = document.getElementById('app-end-date').value;
+    const startTime = document.getElementById('app-start-time').value;
+    const endTime = document.getElementById('app-end-time').value;
+    const venue = document.getElementById('app-venue').value.trim();
+    const participants = document.getElementById('app-participants').value;
+    
+    if (!title || !type || !purpose || !startDate || !endDate || !startTime || !endTime || !venue || !participants || !org) {
+      alert("Please fill in all required Application Information fields, including Organization.");
+      return;
+    }
+
+    const proposalFile = document.getElementById('file-proposal').files[0];
+    const listFile = document.getElementById('file-participants').files[0];
+    
+    if (!editingAppId && (!proposalFile || !listFile)) {
+      alert("Please upload at least the required Activity Proposal and List of Participants.");
+      return;
+    }
+
+    const originalText = btn.innerHTML;
+    btn.innerHTML = "⏳ Processing...";
+    btn.disabled = true;
+
+    try {
+      const proposalUrl = await uploadFileToSupabase('file-proposal', 'Proposal', title);
+      const itineraryUrl = await uploadFileToSupabase('file-itinerary', 'Itinerary', title);
+      const participantsUrl = await uploadFileToSupabase('file-participants', 'List', title);
+      const otherUrl = await uploadFileToSupabase('file-other', 'Other', title);
+
+      btn.innerHTML = "⏳ Saving Database Records...";
+
+      if (editingAppId) {
+        // UPDATE EXISTING APPLICATION
+        const { error: updateError } = await window.db.from('applications').update({
+          organization: org,
+          title: title,
+          type: type,
+          purpose: purpose,
+          start_date: startDate,
+          end_date: endDate,
+          start_time: startTime,
+          end_time: endTime,
+          venue: venue,
+          participants: participants,
+          status: 'Pending Staff Review', 
+          remarks: '' 
+        }).eq('id', editingAppId);
+
+        if (updateError) throw updateError;
+
+        await replaceDocumentRecord(editingAppId, 'Activity Proposal', proposalUrl);
+        await replaceDocumentRecord(editingAppId, 'Itinerary', itineraryUrl);
+        await replaceDocumentRecord(editingAppId, 'List of Participants', participantsUrl);
+        await replaceDocumentRecord(editingAppId, 'Other Documents', otherUrl);
+
+        alert("Application successfully updated and resubmitted!");
+
+      } else {
+        // CREATE NEW APPLICATION
+        const { data: appData, error: dbError } = await window.db.from('applications').insert([
+          {
+            applicant_name: currentUserName,
+            position: 'Faculty Adviser',
+            organization: org,
+            title: title,
+            type: type,
+            purpose: purpose,
+            start_date: startDate,
+            end_date: endDate,
+            start_time: startTime, 
+            end_time: endTime,  
+            venue: venue,
+            participants: participants,
+            status: 'Pending Staff Review',
+            remarks: ''
+          }
+        ]).select().single();
+
+        if (dbError) throw dbError;
+        const newAppId = appData.id; 
+
+        const documentsToInsert = [];
+        if (proposalUrl) documentsToInsert.push({ application_id: newAppId, document_type: 'Activity Proposal', file_url: proposalUrl });
+        if (itineraryUrl) documentsToInsert.push({ application_id: newAppId, document_type: 'Itinerary', file_url: itineraryUrl });
+        if (participantsUrl) documentsToInsert.push({ application_id: newAppId, document_type: 'List of Participants', file_url: participantsUrl });
+        if (otherUrl) documentsToInsert.push({ application_id: newAppId, document_type: 'Other Documents', file_url: otherUrl });
+
+        if (documentsToInsert.length > 0) {
+          const { error: docError } = await window.db.from('documents').insert(documentsToInsert);
+          if (docError) throw docError;
+        }
+        alert("Application and documents submitted successfully!");
+      }
+
+      window.location.reload(); 
+
+    } catch (error) {
+      console.error(error);
+      alert("An error occurred during submission: " + error.message);
+      btn.innerHTML = originalText;
+      btn.disabled = false;
+    }
+  };
+
+  window.checkAuth();
+}
+</script>
+
+<script src="js/sidebar.js"></script>
+<script src="js/topbar.js"></script>
+
+</body>
+</html>

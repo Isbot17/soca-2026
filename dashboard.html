@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOCA · Dashboard</title>
+<link rel="icon" type="image/jpeg" href="images/svc-logo.jpg">
+<link rel="stylesheet" href="css/style.css">
+<!-- Moved Supabase to the head so it loads globally once -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<div class="app">
+
+  <!-- 1. SIDEBAR INJECTION POINT -->
+  <div id="sidebar-placeholder"></div>
+
+  <!-- 2. MAIN CONTENT WRAPPER -->
+  <div class="main-wrapper">
+    
+    <!-- 3. TOPBAR -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 style="margin: 0; font-size: 24px; color: #111827;">Admin Dashboard</h1>
+        <p style="margin: 5px 0 0; font-size: 14px; color: #6b7280;">Dashboard</p>
+      </div>
+
+      
+      <!-- topbar.js will automatically inject the profile and notifications inside here -->
+      <div class="topbar-actions"></div>
+    </header>
+
+    <!-- 4. DASHBOARD CONTENT -->
+    <main class="main main-content">
+      <div class="content">
+
+        <div class="stat-grid">
+          <div class="stat-card">
+            <div class="stat-icon" style="background:var(--info-bg);color:var(--info-text)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6.5 6.5-6.5s6.5 2.9 6.5 6.5"/><path d="M16.5 5.2a3.5 3.5 0 0 1 0 6.6"/><path d="M21.5 20c0-3-1.9-5.5-4.5-6.3"/></svg></div>
+            <div>
+              <div class="stat-num" id="dash-total-accounts">...</div>
+              <div class="stat-label">Total Student Accounts</div>
+              <div class="stat-sub"><a href="accounts.html">View all</a></div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:var(--warning-bg);color:var(--warning-text)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M12 7v5l3.5 2"/></svg></div>
+            <div>
+              <div class="stat-num" id="dash-pending-apps">...</div>
+              <div class="stat-label">Applications Pending</div>
+              <div class="stat-sub"><a href="applications.html">Review now</a></div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:var(--success-bg);color:var(--success-text)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 13 4 4L19 7"/></svg></div>
+            <div>
+              <div class="stat-num" id="dash-approved-apps">...</div>
+              <div class="stat-label">Approved Applications</div>
+              <div class="stat-sub">Across all terms</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background:var(--purple-bg);color:var(--purple-text)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9.5h18M8 3v3M16 3v3"/><path d="m8.5 14 2 2 4.5-4.5"/></svg></div>
+            <div>
+              <div class="stat-num" id="dash-calendar-events">...</div>
+              <div class="stat-label">Active Calendar Events</div>
+              <div class="stat-sub"><a href="calendar.html">Manage</a></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="stack">
+            <div class="card">
+              <div class="card-head">
+                <div>
+                  <h3>Applications & Activities Awaiting Review</h3>
+                  <p>Newest submissions across all organizations.</p>
+                </div>
+                <a class="link-btn" href="applications.html">View All</a>
+              </div>
+              <table>
+                <thead><tr><th>Title</th><th>Organization</th><th>Submitted</th><th>Status</th><th>Action</th></tr></thead>
+                <tbody id="dash-apps-tbody">
+                  <tr><td colspan="5" style="text-align:center; padding: 20px; color:#6b7280;">Loading data...</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="card">
+              <div class="card-head">
+                <div>
+                  <h3>Recently Managed Accounts</h3>
+                  <p>Latest additions and updates to student and staff accounts.</p>
+                </div>
+                <a class="link-btn" href="accounts.html">Manage Accounts</a>
+              </div>
+              <table>
+                <thead><tr><th>Name</th><th>Role</th><th>Status</th><th>Date Added</th></tr></thead>
+                <tbody id="dash-accounts-tbody">
+                  <tr><td colspan="4" style="text-align:center; padding: 20px; color:#6b7280;">Loading recent accounts...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="stack">
+            <div class="card">
+              <div class="card-head">
+                <div><h3>Announcements</h3><p>Posted to all students and staff.</p></div>
+                <a class="link-btn" href="announcements.html">Manage</a>
+              </div>
+              <div class="card-body" id="dash-announcements-list" style="display:flex;flex-direction:column;gap:14px;">
+                <p style="color:#6b7280; font-size:14px; text-align:center;">Loading announcements...</p>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-head">
+                <div><h3>Calendar Snapshots</h3><p>Upcoming scheduled events.</p></div>
+                <a class="link-btn" href="calendar.html">Full Calendar</a>
+              </div>
+              <div class="card-body" id="dash-calendar-list" style="display:flex;flex-direction:column;gap:12px;">
+                 <p style="color:#6b7280; font-size:14px; text-align:center;">Loading calendar...</p>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-head"><div><h3>System Status</h3></div></div>
+              <div class="card-body" style="display:flex;flex-direction:column;gap:12px;">
+                <div style="display:flex;justify-content:space-between;font-size:12.5px;"><span class="cell-sub">Database Connection</span><span class="badge badge-success">Online (Supabase)</span></div>
+                <div style="display:flex;justify-content:space-between;font-size:12.5px;padding-top:6px;"><span class="cell-sub">Active user roles</span><b id="sys-roles">...</b></div>
+                <div style="display:flex;justify-content:space-between;font-size:12.5px;"><span class="cell-sub">Today's Date</span><b id="sys-date"></b></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. JAVASCRIPT MOVED INSIDE .CONTENT -->
+        <script>
+          {
+            const supabaseUrl = 'https://xhxwsjdtpbxosqwzmfsk.supabase.co';
+            const supabaseKey = 'sb_publishable_CYvnSlv4LAbXLW0sNu_qeA_PNA6vhxU';
+            
+            // Prevent redefining the db client if the page is visited multiple times
+            if (!window.db) {
+                window.db = supabase.createClient(supabaseUrl, supabaseKey);
+            }
+
+            document.getElementById('sys-date').innerText = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+
+            function formatDate(dateString) {
+              if(!dateString) return 'N/A';
+              return new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+            }
+
+            function getRoleBadge(role) {
+              if (!role) return 'badge-gray';
+              const r = role.toLowerCase();
+              if (r.includes('admin')) return 'role-badge-admin';
+              if (r.includes('student')) return 'role-badge-student';
+              return 'role-badge-staff';
+            }
+
+            function getStatusBadge(status) {
+              if (!status) return 'badge-gray';
+              const s = status.toLowerCase();
+              if (s === 'approved' || s === 'active') return 'badge-success';
+              if (s === 'pending') return 'badge-warning';
+              if (s === 'ongoing') return 'badge-info'; 
+              if (s === 'disapproved' || s === 'rejected') return 'badge-danger';
+              return 'badge-gray';
+            }
+
+            async function loadDashboard() {
+              // 1. FETCH ACCOUNTS
+              const { data: accounts, error: accErr } = await window.db.from('accounts').select('*').order('created_at', { ascending: false });
+              if (!accErr && accounts) {
+                document.getElementById('dash-total-accounts').innerText = accounts.length;
+                const accTbody = document.getElementById('dash-accounts-tbody');
+                accTbody.innerHTML = '';
+                const recentAccounts = accounts.slice(0, 4);
+                if(recentAccounts.length === 0) {
+                    accTbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:#6b7280;">No accounts found.</td></tr>`;
+                } else {
+                    recentAccounts.forEach(acc => {
+                      accTbody.innerHTML += `
+                        <tr>
+                          <td class="cell-title">${acc.name || 'Unknown'}</td>
+                          <td><span class="badge ${getRoleBadge(acc.role)}">${acc.role || 'User'}</span></td>
+                          <td><span class="badge ${getStatusBadge(acc.status)}">${acc.status || 'Active'}</span></td>
+                          <td>${formatDate(acc.created_at)}</td>
+                        </tr>
+                      `;
+                    });
+                }
+                const uniqueRoles = new Set(accounts.map(a => a.role)).size;
+                document.getElementById('sys-roles').innerText = uniqueRoles;
+              }
+
+              // 2. FETCH APPLICATIONS
+              const { data: apps, error: appErr } = await window.db.from('applications').select('*');
+              let pendingAppsList = [];
+              if (!appErr && apps) {
+                const pendingApps = apps.filter(a => (a.status || '').toLowerCase() === 'pending');
+                const approvedApps = apps.filter(a => (a.status || '').toLowerCase() === 'approved');
+                document.getElementById('dash-pending-apps').innerText = pendingApps.length;
+                document.getElementById('dash-approved-apps').innerText = approvedApps.length;
+
+                pendingAppsList = pendingApps.map(a => ({
+                  displayTitle: a.title || 'Untitled Application',
+                  displayType: a.type || 'Application',
+                  displayOrg: a.organization || 'General',
+                  displayDate: a.created_at,
+                  displayStatus: a.status || 'Pending',
+                  actionLink: 'applications.html'
+                }));
+              }
+
+              // 3. FETCH ACTIVITIES & MERGE FOR THE TABLE
+              const { data: activities, error: actErr } = await window.db.from('activities').select('*');
+              let combinedList = [...pendingAppsList]; 
+              
+              if (!actErr && activities) {
+                const ongoingActivities = activities.filter(a => (a.status || '').toLowerCase() === 'ongoing');
+                
+                const mappedActivities = ongoingActivities.map(a => ({
+                  displayTitle: a.title || 'Untitled Activity',
+                  displayType: a.type || 'Activity',
+                  displayOrg: a.organization || 'General',
+                  displayDate: a.created_at,
+                  displayStatus: a.status || 'Ongoing',
+                  actionLink: 'activities.html'
+                }));
+                
+                combinedList = combinedList.concat(mappedActivities);
+              }
+
+              combinedList.sort((a, b) => new Date(b.displayDate) - new Date(a.displayDate));
+
+              const appTbody = document.getElementById('dash-apps-tbody');
+              appTbody.innerHTML = '';
+              const topItems = combinedList.slice(0, 4);
+              
+              if(topItems.length === 0) {
+                appTbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#6b7280;">All caught up! No items awaiting review.</td></tr>`;
+              } else {
+                topItems.forEach(item => {
+                  appTbody.innerHTML += `
+                    <tr>
+                      <td><div class="cell-title">${item.displayTitle}</div><div class="cell-sub">${item.displayType}</div></td>
+                      <td>${item.displayOrg}</td>
+                      <td>${formatDate(item.displayDate)}</td>
+                      <td><span class="badge ${getStatusBadge(item.displayStatus)}">${item.displayStatus}</span></td>
+                      <td><a class="icon-action" href="${item.actionLink}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/></svg></a></td>
+                    </tr>
+                  `;
+                });
+              }
+
+              // 4. FETCH ANNOUNCEMENTS
+              const { data: announcements, error: annErr } = await window.db.from('announcements').select('*').order('created_at', { ascending: false }).limit(3);
+              const annList = document.getElementById('dash-announcements-list');
+              annList.innerHTML = '';
+              if (!annErr && announcements && announcements.length > 0) {
+                announcements.forEach(ann => {
+                  annList.innerHTML += `
+                    <div>
+                      <div class="cell-title" style="font-size:13px;">${ann.title || 'Announcement'}</div>
+                      <div class="cell-sub">${ann.content || ''}</div>
+                    </div>
+                  `;
+                });
+              } else {
+                annList.innerHTML = `<p style="color:#6b7280; font-size:13px;">No announcements posted yet.</p>`;
+              }
+
+              // 5. FETCH CALENDAR EVENTS
+              const { data: events, error: evErr } = await window.db.from('calendar_events').select('*').limit(3);
+              const evList = document.getElementById('dash-calendar-list');
+              evList.innerHTML = '';
+              if (!evErr && events && events.length > 0) {
+                document.getElementById('dash-calendar-events').innerText = events.length;
+                events.forEach(ev => {
+                  const colors = ['var(--info-text)', '#7c3aed', 'var(--warning-text)', 'var(--success-text)'];
+                  const dotColor = colors[Math.floor(Math.random() * colors.length)];
+                  evList.innerHTML += `
+                    <div style="display:flex;gap:12px;align-items:flex-start;">
+                      <div style="width:6px;height:6px;border-radius:50%;background:${dotColor};margin-top:6px;flex-shrink:0;"></div>
+                      <div>
+                        <div class="cell-title" style="font-size:13px;">${ev.event_title || 'Scheduled Event'}</div>
+                        <div class="cell-sub">${formatDate(ev.event_date || ev.created_at)}</div>
+                      </div>
+                    </div>
+                  `;
+                });
+              } else {
+                document.getElementById('dash-calendar-events').innerText = '0';
+                evList.innerHTML = `<p style="color:#6b7280; font-size:13px;">No upcoming events scheduled.</p>`;
+              }
+            }
+
+            // Immediately call the function when the script is injected
+            loadDashboard();
+          }
+        </script>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="js/sidebar.js"></script>
+<script src="js/topbar.js"></script>
+
+</body>
+</html>

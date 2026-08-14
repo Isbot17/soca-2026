@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOCA · Guidelines</title>
+<link rel="icon" type="image/jpeg" href="images/svc-logo.jpg">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app">
+
+  <!-- 1. SIDEBAR INJECTION POINT -->
+  <div id="sidebar-placeholder"></div>
+  
+  <!-- 2. MAIN CONTENT WRAPPER -->
+  <div class="main-wrapper">
+    
+    <!-- 3. TOPBAR -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 style="margin: 0; font-size: 24px; color: #111827;">Guideline & Policies</h1>
+        <div class="breadcrumb"><a href="#">Dashboard</a><span class="sep">/</span><span class="current">Guidelines</span></div>
+      </div>
+      <div class="topbar-actions"></div>
+    </header>
+
+    <!-- 4. DASHBOARD CONTENT (SPA Target) -->
+    <div class="content">
+
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-icon" style="background:var(--purple-bg);color:var(--purple-text)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V4H6.5A2.5 2.5 0 0 0 4 6.5v13z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20"/></svg></div>
+          <div><div class="stat-num" id="stat-total">...</div><div class="stat-label">Total Guidelines</div><div class="stat-sub">All published guidelines</div></div></div>
+        <div class="stat-card"><div class="stat-icon" style="background:var(--success-bg);color:var(--success-text)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 13 4 4L19 7"/></svg></div>
+          <div><div class="stat-num" id="stat-active">...</div><div class="stat-label">Active Guidelines</div><div class="stat-sub">Currently in effect</div></div></div>
+        <div class="stat-card"><div class="stat-icon" style="background:var(--warning-bg);color:var(--warning-text)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M12 7v5l3.5 2"/></svg></div>
+          <div><div class="stat-num" id="stat-review">...</div><div class="stat-label">For Review</div><div class="stat-sub">Under review</div></div></div>
+        <div class="stat-card"><div class="stat-icon" style="background:var(--info-bg);color:var(--info-text)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7z"/></svg></div>
+          <div><div class="stat-num" id="stat-archived">...</div><div class="stat-label">Archived</div><div class="stat-sub">Previously updated</div></div></div>
+      </div>
+
+      <div class="toolbar">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="text" id="search-guidelines" placeholder="Search guidelines...">
+        </div>
+        
+        <select id="filter-category" class="select" style="appearance: none; background-color: transparent; border: 1px solid var(--border); padding: 8px 32px 8px 12px; border-radius: 6px; cursor: pointer;">
+          <option value="All">All Categories</option>
+          <option value="Organization Guidelines">Organization Guidelines</option>
+          <option value="Activity Guidelines">Activity Guidelines</option>
+          <option value="Safety & Health Guidelines">Safety & Health Guidelines</option>
+          <option value="Policies & Procedures">Policies & Procedures</option>
+        </select>
+        
+        <button id="add-guideline-btn" class="btn btn-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg> Add Guideline</button>
+      </div>
+
+      <div class="card">
+        <table>
+          <thead><tr><th>Guideline Title</th><th>Category</th><th>Status</th><th>Date Updated</th><th>Updated By</th><th>Action</th></tr></thead>
+          <tbody id="guidelines-tbody">
+            <tr><td colspan="6" style="text-align: center; color: var(--text-sub);">Loading guidelines...</td></tr>
+          </tbody>
+        </table>
+        <div class="pagination">
+          <span id="pagination-text">Showing 0 guidelines</span>
+          <div class="pages"><button>‹</button><button class="active">1</button><button>›</button></div>
+        </div>
+      </div>
+
+      <!-- ADD GUIDELINE MODAL (Hidden by default) -->
+      <div id="add-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Add New Guideline</h3>
+            <button id="close-modal" class="btn-close">&times;</button>
+          </div>
+          <form id="add-guideline-form">
+            
+            <!-- THE MISSING FEEDBACK MESSAGE DIV -->
+            <div id="modal-feedback" style="text-align: center; font-size: 14px; font-weight: 600; margin-bottom: 16px;"></div>
+            
+            <div class="form-group">
+              <label>Guideline Title</label>
+              <input type="text" id="new-title" required class="input-field" placeholder="e.g., Dress Code Policy">
+            </div>
+            <div class="form-group">
+              <label>Category</label>
+              <select id="new-category" class="input-field">
+                <option value="General Guidelines">General Guidelines</option>
+                <option value="Organization Guidelines">Organization Guidelines</option>
+                <option value="Activity Guidelines">Activity Guidelines</option>
+                <option value="Safety & Health Guidelines">Safety & Health Guidelines</option>
+                <option value="Policies & Procedures">Policies & Procedures</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Status</label>
+              <select id="new-status" class="input-field">
+                <option value="Draft">Draft</option>
+                <option value="Active">Active</option>
+                <option value="Under Review">Under Review</option>
+              </select>
+            </div>
+            <div class="modal-footer">
+              <button type="submit" class="btn btn-primary" id="save-btn">Save Guideline</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- SUPABASE FETCH & INJECTION LOGIC -->
+      <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+        
+        const supabaseUrl = 'https://xhxwsjdtpbxosqwzmfsk.supabase.co';
+        const supabaseKey = 'sb_publishable_CYvnSlv4LAbXLW0sNu_qeA_PNA6vhxU';
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
+        let allGuidelines = [];
+
+        // 1. Fetch from Supabase
+        async function loadGuidelines() {
+            try {
+                const { data, error } = await supabase.from('guidelines').select('*').order('created_at', { ascending: false });
+                if (error) throw error;
+                allGuidelines = data || [];
+                updateDashboardStats();
+                renderTable(allGuidelines);
+            } catch (error) {
+                console.error("Error loading guidelines:", error);
+                document.getElementById('guidelines-tbody').innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--danger);">Failed to load data. Check console.</td></tr>`;
+            }
+        }
+
+        // 2. Update Stats
+        function updateDashboardStats() {
+            const total = allGuidelines.length;
+            let active = 0, review = 0, archived = 0;
+
+            allGuidelines.forEach(g => {
+                const status = (g.status || '').toLowerCase();
+                if (status === 'active') active++;
+                else if (status.includes('review')) review++;
+                else if (status === 'archived') archived++;
+            });
+
+            document.getElementById('stat-total').innerText = total;
+            document.getElementById('stat-active').innerText = active;
+            document.getElementById('stat-review').innerText = review;
+            document.getElementById('stat-archived').innerText = archived;
+        }
+
+        // 3. Render Table
+        function renderTable(dataToRender) {
+            const tbody = document.getElementById('guidelines-tbody');
+            tbody.innerHTML = ''; 
+
+            if (dataToRender.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-sub);">No guidelines match your search.</td></tr>`;
+                document.getElementById('pagination-text').innerText = `Showing 0 guidelines`;
+                return;
+            }
+
+            dataToRender.forEach(g => {
+                let statusBadge = 'badge-success';
+                const status = (g.status || 'Draft').toLowerCase();
+                if (status.includes('review')) statusBadge = 'badge-warning';
+                else if (status === 'archived') statusBadge = 'badge-info';
+                else if (status === 'draft') statusBadge = 'badge-purple';
+
+                const dateObj = new Date(g.updated_at || g.created_at);
+                const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><div class="cell-title">${g.title || 'Untitled Guideline'}</div></td>
+                    <td><span class="badge badge-purple">${g.category || 'General'}</span></td>
+                    <td><span class="badge ${statusBadge}">${g.status || 'Draft'}</span></td>
+                    <td>${dateStr}</td>
+                    <td>${g.updated_by || 'System Admin'}</td>
+                    <td>
+                      <a href="#" class="icon-action" title="View"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/></svg></a>
+                      <a href="#" class="icon-action" title="Edit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></a>
+                      <a href="#" class="icon-action" title="Archive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></a>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('pagination-text').innerText = `Showing 1 to ${dataToRender.length} guidelines`;
+        }
+
+        // 4. Search and Filter
+        function filterData() {
+            const searchTerm = document.getElementById('search-guidelines').value.toLowerCase();
+            const categoryTerm = document.getElementById('filter-category').value;
+
+            const filtered = allGuidelines.filter(g => {
+                const matchesSearch = (g.title || '').toLowerCase().includes(searchTerm) || (g.updated_by || '').toLowerCase().includes(searchTerm);
+                const matchesCategory = categoryTerm === 'All' || (g.category || '') === categoryTerm;
+                return matchesSearch && matchesCategory;
+            });
+
+            renderTable(filtered);
+        }
+
+        document.getElementById('search-guidelines').addEventListener('input', filterData);
+        document.getElementById('filter-category').addEventListener('change', filterData);
+
+        // 5. Modal and Form Logic
+        const modal = document.getElementById('add-modal');
+        const addBtn = document.getElementById('add-guideline-btn');
+        const closeBtn = document.getElementById('close-modal');
+        const addForm = document.getElementById('add-guideline-form');
+        const saveBtn = document.getElementById('save-btn');
+        const feedback = document.getElementById('modal-feedback');
+
+        // Open Modal
+        addBtn.addEventListener('click', () => {
+            modal.style.display = 'flex';
+        });
+
+        // Close Modal
+        closeBtn.addEventListener('click', () => {
+            modal.style.display = 'none';
+            addForm.reset(); 
+            feedback.innerText = ''; // Clear feedback on close
+        });
+
+        // Handle Submit
+        addForm.addEventListener('submit', async (e) => {
+            e.preventDefault(); 
+            
+            const newTitle = document.getElementById('new-title').value;
+            const newCategory = document.getElementById('new-category').value;
+            const newStatus = document.getElementById('new-status').value;
+            
+            // UI Loading State
+            saveBtn.innerText = 'Saving...';
+            saveBtn.disabled = true;
+            feedback.innerText = ''; 
+
+            try {
+                const { error } = await supabase.from('guidelines').insert([
+                    { 
+                        title: newTitle, 
+                        category: newCategory, 
+                        status: newStatus,
+                        updated_by: 'System Admin' 
+                    }
+                ]);
+
+                if (error) throw error;
+
+                // UI Success State
+                feedback.style.color = '#16a34a'; 
+                feedback.innerText = 'Guideline saved successfully!';
+                
+                // Wait 1 second, then close modal and refresh table
+                setTimeout(async () => {
+                    modal.style.display = 'none';
+                    addForm.reset();
+                    feedback.innerText = ''; 
+                    await loadGuidelines();
+                }, 1000);
+
+            } catch (error) {
+                console.error("Error saving guideline:", error);
+                // UI Error State
+                feedback.style.color = '#dc2626'; 
+                feedback.innerText = 'Failed to save. Check Supabase RLS settings.';
+            } finally {
+                // Ensure button resets its state regardless of success or failure
+                saveBtn.innerText = 'Save Guideline';
+                saveBtn.disabled = false;
+            }
+        });
+
+        // Initialize script on page load
+        loadGuidelines();
+      </script>
+
+    </div>
+  </div>
+</div>
+<script src="js/sidebar.js"></script>
+<script src="js/topbar.js"></script>
+</body>
+</html>

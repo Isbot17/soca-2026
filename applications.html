@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOCA · Applications</title>
+<link rel="icon" type="image/jpeg" href="images/svc-logo.jpg">
+<link rel="stylesheet" href="css/style.css">
+<!-- Moved Supabase to the head so it loads globally once -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<div class="app">
+
+  <!-- 1. SIDEBAR INJECTION POINT (Sibling to main-wrapper) -->
+  <div id="sidebar-placeholder"></div>
+  
+  <!-- 2. MAIN CONTENT WRAPPER -->
+  <div class="main-wrapper">
+    
+    <!-- 3. TOPBAR -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 style="margin: 0; font-size: 24px; color: #111827;">Manage Applications</h1>
+         <div class="breadcrumb"><a href="#">Dashboard</a><span class="sep">/</span><span class="current">Applications</span></div>
+      </div>
+      
+      <!-- topbar.js will automatically inject the profile and notifications inside here -->
+      <div class="topbar-actions"></div>
+    </header>
+
+    <!-- 4. DASHBOARD CONTENT (The only <main> element) -->
+    <main class="main-content">
+      
+      <!-- EVERYTHING MUST BE INSIDE .CONTENT -->
+      <div class="content">
+        <div class="stat-grid">
+          <div class="stat-card"><div class="stat-icon" style="background:var(--info-bg);color:var(--info-text)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></div>
+            <div><div class="stat-num" id="app-count-total">...</div><div class="stat-label">Total Applications</div><div class="stat-sub">This academic year</div></div></div>
+          <div class="stat-card"><div class="stat-icon" style="background:var(--warning-bg);color:var(--warning-text)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M12 7v5l3.5 2"/></svg></div>
+            <div><div class="stat-num" id="app-count-pending">...</div><div class="stat-label" id="lbl-pending-title">Awaiting Approval</div><div class="stat-sub" id="lbl-pending-sub">Needs admin action</div></div></div>
+          <div class="stat-card"><div class="stat-icon" style="background:var(--success-bg);color:var(--success-text)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 13 4 4L19 7"/></svg></div>
+            <div><div class="stat-num" id="app-count-approved">...</div><div class="stat-label">Approved &amp; Released</div><div class="stat-sub">Across all terms</div></div></div>
+          <div class="stat-card"><div class="stat-icon" style="background:var(--danger-bg);color:var(--danger-text)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></div>
+            <div><div class="stat-num" id="app-count-disapproved">...</div><div class="stat-label">Disapproved</div><div class="stat-sub">This academic year</div></div></div>
+        </div>
+
+        <div class="pill-tabs" id="filter-tabs">
+          <button class="active" data-filter="all">All</button>
+          <button data-filter="pending" id="tab-pending">Pending Admin Approval</button>
+          <button data-filter="approved">Approved</button>
+          <button data-filter="disapproved">Disapproved</button>
+        </div>
+
+        <div class="toolbar">
+          <div class="search-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input placeholder="Search applications by title or organization..."></div>
+          <div class="select"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16l-6.5 7.5v5L10.5 20v-7.5L4 5z"/></svg> All Types <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></div>
+          <div class="select"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16l-6.5 7.5v5L10.5 20v-7.5L4 5z"/></svg> All Organizations <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></div>
+        </div>
+
+        <div class="card">
+          <table>
+            <thead><tr><th>Activity Title</th><th>Organization</th><th>Date Submitted</th><th>Process Stage</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody id="appsTableBody">
+              <tr>
+                <td colspan="6" style="text-align: center; padding: 20px; color: #6b7280;">
+                  Loading applications from database...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="pagination">
+            <span>Showing live applications from database</span>
+            <div class="pages"><button>‹</button><button class="active">1</button><button>›</button></div>
+          </div>
+        </div>
+
+        <!-- MOVED SCRIPT INSIDE .CONTENT -->
+        <script>
+          {
+            // Initialize Supabase inside a block to prevent redeclaration errors
+            const supabaseUrl = 'https://xhxwsjdtpbxosqwzmfsk.supabase.co';
+            const supabaseKey = 'sb_publishable_CYvnSlv4LAbXLW0sNu_qeA_PNA6vhxU';
+            
+            if (!window.db) {
+                window.db = supabase.createClient(supabaseUrl, supabaseKey);
+            }
+
+            // Authentication & Role Check
+            const userStr = localStorage.getItem('currentUser');
+            if (!userStr) window.location.href = 'index.html';
+            const currentUser = JSON.parse(userStr || '{}');
+            const isStaff = (currentUser.role === 'SAO Staff' || currentUser.role === 'Staff');
+
+            let globalAppsData = [];
+
+            // UI adjustments for SAO Staff
+            if (isStaff) {
+              document.getElementById('tab-pending').innerText = "Pending Staff Review";
+              document.getElementById('lbl-pending-title').innerText = "Awaiting Staff Review";
+              document.getElementById('lbl-pending-sub').innerText = "Needs your action";
+            }
+
+            // Helper function to format dates
+            function formatDate(dateString) {
+              if (!dateString) return 'N/A';
+              return new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+            }
+
+            // Helper function to get correct badge color based on status
+            function getStatusBadge(status) {
+              if (!status) return 'badge-gray';
+              const s = status.toLowerCase();
+              if (s === 'approved' || s === 'released') return 'badge-success';
+              if (s.includes('pending') || s.includes('review')) return 'badge-warning';
+              if (s === 'disapproved' || s === 'rejected') return 'badge-danger';
+              return 'badge-gray';
+            }
+
+            // Helper to determine the "Stage" text based on status
+            function getProcessStage(status) {
+              if (!status) return 'Unknown';
+              const s = status.toLowerCase();
+              if (s === 'approved') return 'Released';
+              if (s === 'disapproved' || s === 'rejected') return 'Closed';
+              if (s === 'pending staff review') return 'Under Staff Review';
+              return 'Under Admin Review';
+            }
+
+            // Calculate and update the top stat numbers
+            function updateStatistics(data) {
+              let pendingCount = 0;
+              let approvedCount = 0;
+              let disapprovedCount = 0;
+
+              data.forEach(app => {
+                const s = (app.status || '').toLowerCase();
+                if (s === 'approved') approvedCount++;
+                else if (s === 'disapproved' || s === 'rejected') disapprovedCount++;
+                else if (isStaff && s === 'pending staff review') pendingCount++;
+                else if (!isStaff && s === 'pending admin approval') pendingCount++;
+              });
+
+              document.getElementById('app-count-total').innerText = data.length;
+              document.getElementById('app-count-pending').innerText = pendingCount;
+              document.getElementById('app-count-approved').innerText = approvedCount;
+              document.getElementById('app-count-disapproved').innerText = disapprovedCount;
+            }
+
+            // Render the table based on the selected filter
+            function renderTable(filterType) {
+              const tbody = document.getElementById('appsTableBody');
+              tbody.innerHTML = ''; 
+
+              let filteredData = globalAppsData;
+
+              if (filterType === 'pending') {
+                if (isStaff) {
+                  filteredData = globalAppsData.filter(a => (a.status || '').toLowerCase() === 'pending staff review');
+                } else {
+                  filteredData = globalAppsData.filter(a => (a.status || '').toLowerCase() === 'pending admin approval');
+                }
+              } else if (filterType === 'approved') {
+                filteredData = globalAppsData.filter(a => (a.status || '').toLowerCase() === 'approved');
+              } else if (filterType === 'disapproved') {
+                filteredData = globalAppsData.filter(a => (a.status || '').toLowerCase() === 'disapproved' || (a.status || '').toLowerCase() === 'rejected');
+              }
+
+              if (filteredData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 20px; color: #6b7280;">No applications found matching this filter.</td></tr>`;
+                return;
+              }
+
+              filteredData.forEach(app => {
+                const title = app.title || 'Untitled Application';
+                const type = app.type || 'Activity';
+                const org = app.organization || 'General Office';
+                const dateSub = formatDate(app.created_at);
+                const status = app.status || 'Pending';
+                const stage = getProcessStage(status);
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                  <td><div class="cell-title">${title}</div><div class="cell-sub">${type}</div></td>
+                  <td>${org}</td>
+                  <td>${dateSub}</td>
+                  <td>${stage}</td>
+                  <td><span class="badge ${getStatusBadge(status)}">${status}</span></td>
+                  <td>
+                    <a class="icon-action" href="review-application.html?id=${app.id}" title="Review">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </a>
+                    <a class="icon-action" title="More Options" onclick="alert('More options coming soon!')" style="cursor: pointer;">
+                      <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+                    </a>
+                  </td>
+                `;
+                tbody.appendChild(tr);
+              });
+            }
+
+            // Setup tab filtering
+            function setupTabs() {
+              const tabs = document.querySelectorAll('#filter-tabs button');
+              tabs.forEach(tab => {
+                tab.addEventListener('click', (e) => {
+                  tabs.forEach(t => t.classList.remove('active'));
+                  e.target.classList.add('active');
+                  renderTable(e.target.getAttribute('data-filter'));
+                });
+              });
+            }
+
+            // Fetch data from database on load
+            async function loadApplications() {
+              const { data, error } = await window.db
+                .from('applications')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+              if (error) {
+                console.error("Error fetching applications:", error);
+                document.getElementById('appsTableBody').innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px; color:red;">Failed to connect to database.</td></tr>`;
+                return;
+              }
+
+              // Apply the strict Role-Based Visibility Filter
+              globalAppsData = data.filter(app => {
+                  const s = (app.status || '').toLowerCase();
+                  
+                  if (isStaff) {
+                    // SAO Staff ONLY sees Pending Staff Review & Approved
+                    return s === 'pending staff review' || s === 'approved';
+                  } else {
+                    // Admin View (Default logic)
+                    return s !== 'pending staff review' && s !== 'submitted' && s !== 'pending';
+                  }
+              });
+
+              updateStatistics(globalAppsData);
+              setupTabs();
+              
+              // Find active tab and render
+              const activeTab = document.querySelector('#filter-tabs button.active');
+              const filter = activeTab ? activeTab.getAttribute('data-filter') : 'all';
+              renderTable(filter); 
+            }
+
+            // Execute immediately instead of waiting for DOMContentLoaded
+            loadApplications();
+          }
+        </script>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="js/sidebar.js"></script>
+<script src="js/topbar.js"></script>
+</body>
+</html>

@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOCA · Activities</title>
+<link rel="icon" type="image/jpeg" href="images/svc-logo.jpg">
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(17, 24, 39, 0.7); display: none; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(2px); }
+  .modal-content { background: white; padding: 24px; border-radius: 8px; width: 100%; max-width: 550px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .modal-header h3 { margin: 0; font-size: 18px; color: #111827; }
+  .close-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280; padding: 0; line-height: 1; }
+  .close-btn:hover { color: #111827; }
+  .form-group { margin-bottom: 16px; text-align: left; }
+  .form-group label { display: block; margin-bottom: 6px; font-size: 14px; font-weight: 500; color: #374151; }
+  .form-group input, .form-group select { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; box-sizing: border-box; outline: none; transition: border-color 0.2s; }
+  .form-group input:focus, .form-group select:focus { border-color: #3b82f6; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .modal-footer { margin-top: 24px; display: flex; justify-content: flex-end; gap: 12px; }
+  .btn-secondary { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; }
+  .btn-secondary:hover { background: #e5e7eb; }
+  
+  .badge-info { background: #e0f2fe; color: #0369a1; border-color: #bae6fd; }
+
+  /* New Styles for View Details Modal */
+  .detail-row { margin-bottom: 12px; }
+  .detail-label { font-size: 12px; color: #6b7280; font-weight: 500; text-transform: uppercase; margin-bottom: 4px;}
+  .detail-value { font-size: 14px; color: #111827; font-weight: 500; }
+  .photo-gallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 12px; }
+  .photo-gallery img { width: 100%; height: 100px; object-fit: cover; border-radius: 6px; border: 1px solid #d1d5db; cursor: pointer; transition: transform 0.2s; }
+  .photo-gallery img:hover { transform: scale(1.05); }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <div id="sidebar-placeholder"></div>
+  
+  <div class="main-wrapper">
+    
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 style="margin: 0; font-size: 24px; color: #111827;">Manage Off-Campus Activities</h1>
+        <div class="breadcrumb"><a href="#">Dashboard</a><span class="sep">/</span><span class="current">Activities</span></div>
+      </div>
+      <div class="topbar-actions"></div>
+    </header>
+
+    <main class="main-content">
+ 
+      <div class="content">
+
+        <!-- STATS GRID -->
+        <div class="stat-grid">
+          <div class="stat-card"><div class="stat-icon" style="background:var(--info-bg);color:var(--info-text)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9.5h18M8 3v3M16 3v3"/><path d="m8.5 14 2 2 4.5-4.5"/></svg></div>
+            <div><div class="stat-num" id="stat-total">...</div><div class="stat-label">Total Activities</div><div class="stat-sub">This academic year</div></div></div>
+          
+          <div class="stat-card"><div class="stat-icon" style="background:#e0f2fe;color:#0369a1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></div>
+            <div><div class="stat-num" id="stat-upcoming">...</div><div class="stat-label">Upcoming</div><div class="stat-sub">Scheduled for later</div></div></div>
+
+          <div class="stat-card"><div class="stat-icon" style="background:var(--warning-bg);color:var(--warning-text)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M12 7v5l3.5 2"/></svg></div>
+            <div><div class="stat-num" id="stat-ongoing">...</div><div class="stat-label">Ongoing</div><div class="stat-sub">Happening right now</div></div></div>
+          
+          <div class="stat-card"><div class="stat-icon" style="background:var(--success-bg);color:var(--success-text)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 13 4 4L19 7"/></svg></div>
+            <div><div class="stat-num" id="stat-completed">...</div><div class="stat-label">Completed</div><div class="stat-sub">Finished events</div></div></div>
+        </div>
+
+        <!-- TABS -->
+        <div class="pill-tabs" id="filter-tabs">
+          <button class="active" data-filter="all">All Activities</button>
+          <button data-filter="upcoming">Upcoming</button>
+          <button data-filter="ongoing">Ongoing</button>
+          <button data-filter="completed">Completed</button>
+          <button data-filter="cancelled">Cancelled</button>
+        </div>
+
+        <!-- TOOLBAR -->
+        <div class="toolbar">
+          <div class="search-box"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input placeholder="Search activities by title or organization..."></div>
+          <div class="select"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16l-6.5 7.5v5L10.5 20v-7.5L4 5z"/></svg> All Types <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></div>
+          <button class="btn btn-primary" onclick="openActivityModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg> Add Manual Activity</button>
+        </div>
+
+        <!-- DATA TABLE -->
+        <div class="card">
+          <table>
+            <thead><tr><th>Activity Title</th><th>Organization</th><th>Date</th><th>Venue</th><th>Participants</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody id="activitiesTableBody">
+              <tr>
+                <td colspan="7" style="text-align: center; padding: 20px; color: #6b7280;">
+                  Loading activities from database...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="pagination">
+            <span>Showing activities directly from database</span>
+            <div class="pages"><button>‹</button><button class="active">1</button><button>›</button></div>
+          </div>
+        </div>
+
+        <!-- ADD ACTIVITY MODAL FORM -->
+        <div id="addActivityModal" class="modal-overlay">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h3>Add Manual Activity</h3>
+              <button class="close-btn" onclick="closeActivityModal()">×</button>
+            </div>
+            <form id="addActivityForm">
+              <div class="form-group">
+                <label>Activity Title</label>
+                <input type="text" id="newActTitle" required placeholder="e.g. Leadership Training Seminar">
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Type</label>
+                  <select id="newActType" required>
+                    <option value="Seminar">Seminar</option>
+                    <option value="Workshop">Workshop</option>
+                    <option value="Outreach">Outreach</option>
+                    <option value="Competition">Competition</option>
+                    <option value="Event">Event</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Organization</label>
+                  <input type="text" id="newActOrg" required placeholder="e.g. Student Council">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Start Date</label>
+                  <input type="date" id="newActDate" required>
+                </div>
+                <div class="form-group">
+                  <label>End Date</label>
+                  <input type="date" id="newActEndDate" required>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Start Time</label>
+                  <input type="time" id="newActStartTime" required>
+                </div>
+                <div class="form-group">
+                  <label>End Time</label>
+                  <input type="time" id="newActEndTime" required>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Venue</label>
+                  <input type="text" id="newActVenue" required placeholder="e.g. College Gymnasium">
+                </div>
+                <div class="form-group">
+                  <label>Expected Participants</label>
+                  <input type="number" id="newActParticipants" required placeholder="e.g. 150">
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Status</label>
+                <select id="newActStatus" required>
+                  <option value="Upcoming">Upcoming</option>
+                  <option value="Ongoing">Ongoing</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Cancelled">Cancelled</option>
+                </select>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn-secondary" onclick="closeActivityModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary" id="saveActivityBtn">Save Activity</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- NEW VIEW ACTIVITY MODAL -->
+        <div id="viewActivityModal" class="modal-overlay">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h3 id="viewTitle">Activity Details</h3>
+              <button class="close-btn" onclick="closeViewModal()">×</button>
+            </div>
+            
+            <div style="max-height: 70vh; overflow-y: auto; padding-right: 5px;">
+              <div class="form-row">
+                <div class="detail-row"><div class="detail-label">Organization</div><div class="detail-value" id="viewOrg"></div></div>
+                <div class="detail-row"><div class="detail-label">Type</div><div class="detail-value" id="viewType"></div></div>
+              </div>
+              <div class="form-row">
+                <div class="detail-row"><div class="detail-label">Date & Time</div><div class="detail-value" id="viewDate"></div></div>
+                <div class="detail-row"><div class="detail-label">Venue</div><div class="detail-value" id="viewVenue"></div></div>
+              </div>
+              <div class="detail-row"><div class="detail-label">Status</div><div class="detail-value" id="viewStatus"></div></div>
+
+              <h4 style="margin-top: 24px; margin-bottom: 8px; font-size: 15px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">Post-Activity Photos</h4>
+              <div id="viewPhotos" class="photo-gallery">
+                <!-- Photos will load here dynamically -->
+              </div>
+            </div>
+
+            <div class="modal-footer">
+              <button type="button" class="btn-secondary" onclick="closeViewModal()">Close</button>
+            </div>
+          </div>
+        </div>
+
+        <script>
+          {
+            const supabaseUrl = 'https://xhxwsjdtpbxosqwzmfsk.supabase.co';
+            const supabaseKey = 'sb_publishable_CYvnSlv4LAbXLW0sNu_qeA_PNA6vhxU';
+            
+            if (!window.db) {
+                window.db = supabase.createClient(supabaseUrl, supabaseKey);
+            }
+
+            window.globalActivitiesData = [];
+
+            window.getStatusBadge = function(status) {
+              if (!status) return 'badge-gray';
+              const s = status.toLowerCase();
+              if (s === 'completed') return 'badge-success';
+              if (s === 'ongoing') return 'badge-warning';
+              if (s === 'upcoming') return 'badge-info';
+              if (s === 'cancelled' || s === 'canceled') return 'badge-danger';
+              return 'badge-gray';
+            };
+
+            // STRICT TIME CALCULATOR
+            window.calculateDynamicStatus = function(startDate, startTime, endDate, endTime, dbStatus) {
+              if (dbStatus === 'Cancelled Activity' || dbStatus === 'Cancelled') return 'Cancelled';
+              if (!startDate) return dbStatus || 'Upcoming'; 
+
+              const now = new Date(); 
+              
+              const cleanStart = startTime ? startTime.substring(0, 5) : '00:00';
+              const cleanEnd = endTime ? endTime.substring(0, 5) : '23:59';
+              const finalEndDate = endDate || startDate;
+              
+              const start = new Date(`${startDate}T${cleanStart}:00`);
+              const end = new Date(`${finalEndDate}T${cleanEnd}:59`);
+
+              if (now < start) return 'Upcoming';
+              if (now >= start && now <= end) return 'Ongoing';
+              if (now > end) return 'Completed';
+
+              return dbStatus || 'Upcoming'; 
+            };
+
+            window.updateStatistics = function(data) {
+              let upcomingCount = 0; let ongoingCount = 0; let completedCount = 0;
+
+              data.forEach(act => {
+                const s = (act.status || '').toLowerCase();
+                if (s === 'completed') completedCount++;
+                else if (s === 'upcoming') upcomingCount++;
+                else if (s === 'ongoing') ongoingCount++;
+              });
+
+              document.getElementById('stat-total').innerText = data.length;
+              document.getElementById('stat-upcoming').innerText = upcomingCount;
+              document.getElementById('stat-ongoing').innerText = ongoingCount;
+              document.getElementById('stat-completed').innerText = completedCount;
+            };
+
+            window.renderTable = function(filterType) {
+              const tbody = document.getElementById('activitiesTableBody');
+              tbody.innerHTML = ''; 
+
+              let filteredData = window.globalActivitiesData;
+
+              if (filterType !== 'all') {
+                filteredData = window.globalActivitiesData.filter(a => {
+                  return (a.status || 'ongoing').toLowerCase() === filterType;
+                });
+              }
+
+              if (filteredData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 20px; color: #6b7280;">No activities found matching this filter.</td></tr>`;
+                return;
+              }
+
+              filteredData.forEach(act => {
+                const title = act.title || 'Untitled Activity';
+                const type = act.type || 'General Activity';
+                const org = act.organization || 'General Office';
+                const date = act.display_date || 'TBA';
+                const venue = act.venue || 'TBA';
+                const participants = act.participants || '-';
+                const status = act.status || 'Ongoing';
+
+                const tr = document.createElement('tr');
+                // The View button (eye icon) is now wired to window.openViewModal(act.id)
+                tr.innerHTML = `
+                  <td><div class="cell-title">${title}</div><div class="cell-sub">${type}</div></td>
+                  <td>${org}</td>
+                  <td><div style="font-size: 13px;">${date}</div></td>
+                  <td>${venue}</td>
+                  <td>${participants}</td>
+                  <td><span class="badge ${window.getStatusBadge(status)}">${status}</span></td>
+                  <td>
+                    <a class="icon-action" style="cursor: pointer;" title="View Details" onclick="window.openViewModal(${act.id})">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 12S5 5 12 5s10.5 7 10.5 7-3.5 7-10.5 7S1.5 12 1.5 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </a>
+                    <a class="icon-action" style="cursor: pointer;" title="Edit Status" onclick="window.updateActivityStatus(${act.id})">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+                    </a>
+                    <a class="icon-action" style="cursor: pointer; color: #ef4444;" title="Cancel Activity" onclick="window.cancelActivity(${act.id})">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                    </a>
+                  </td>
+                `;
+                tbody.appendChild(tr);
+              });
+            };
+
+            window.setupTabs = function() {
+              const tabs = document.querySelectorAll('#filter-tabs button');
+              tabs.forEach(tab => {
+                tab.addEventListener('click', (e) => {
+                  tabs.forEach(t => t.classList.remove('active'));
+                  e.target.classList.add('active');
+                  window.renderTable(e.target.getAttribute('data-filter'));
+                });
+              });
+            };
+
+            window.loadActivities = async function() {
+              const { data: acts, error } = await window.db.from('activities').select('*');
+
+              let combined = [];
+
+              if (acts) {
+                for (const act of acts) {
+                  let dynStatus = window.calculateDynamicStatus(act.activity_date, act.start_time, act.end_date, act.end_time, act.status);
+
+                  if (dynStatus !== act.status) {
+                    await window.db.from('activities').update({ status: dynStatus }).eq('id', act.id);
+                  }
+
+                  let dateStr = act.activity_date ? new Date(act.activity_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'TBA';
+                  if (act.start_time) {
+                    const cleanTimeUI = act.start_time.substring(0, 5);
+                    const timeStr = new Date(`${act.activity_date}T${cleanTimeUI}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+                    dateStr += ` at ${timeStr}`;
+                  }
+
+                  // Push the photos array as well so we can access it in the view modal
+                  combined.push({
+                    id: act.id,
+                    title: act.title,
+                    type: act.type,
+                    organization: act.organization,
+                    display_date: dateStr,
+                    raw_date: act.activity_date || '1970-01-01',
+                    venue: act.venue,
+                    participants: act.participants,
+                    status: dynStatus,
+                    photos: act.photos || []
+                  });
+                }
+              }
+
+              combined.sort((a, b) => new Date(b.raw_date) - new Date(a.raw_date));
+
+              window.globalActivitiesData = combined;
+              window.updateStatistics(combined);
+              window.setupTabs();
+              
+              const activeTab = document.querySelector('#filter-tabs button.active');
+              const filter = activeTab ? activeTab.getAttribute('data-filter') : 'all';
+              window.renderTable(filter); 
+            };
+
+            // ---- NEW LOGIC: OPEN VIEW MODAL & INJECT PHOTOS ----
+            window.openViewModal = function(id) {
+              const act = window.globalActivitiesData.find(a => a.id === id);
+              if (!act) return;
+
+              // Populate Text Fields
+              document.getElementById('viewTitle').innerText = act.title || 'Untitled Activity';
+              document.getElementById('viewOrg').innerText = act.organization || 'N/A';
+              document.getElementById('viewType').innerText = act.type || 'N/A';
+              document.getElementById('viewDate').innerText = act.display_date || 'N/A';
+              document.getElementById('viewVenue').innerText = act.venue || 'N/A';
+              document.getElementById('viewStatus').innerHTML = `<span class="badge ${window.getStatusBadge(act.status)}">${act.status}</span>`;
+
+              // Populate Photo Gallery
+              const photoContainer = document.getElementById('viewPhotos');
+              photoContainer.innerHTML = '';
+              
+              if (act.photos && act.photos.length > 0) {
+                act.photos.forEach(url => {
+                  photoContainer.innerHTML += `
+                    <a href="${url}" target="_blank" title="Click to view full size">
+                      <img src="${url}" alt="Activity Photo">
+                    </a>`;
+                });
+              } else {
+                photoContainer.innerHTML = '<span style="font-size: 13px; color: #6b7280; font-style: italic; grid-column: span 3;">No photos have been uploaded for this activity yet.</span>';
+              }
+
+              document.getElementById('viewActivityModal').style.display = 'flex';
+            };
+
+            window.closeViewModal = function() {
+              document.getElementById('viewActivityModal').style.display = 'none';
+            };
+            // ----------------------------------------------------
+
+            window.updateActivityStatus = async function(id) {
+              const newStatus = prompt("Enter new status (Upcoming, Ongoing, Completed, Cancelled):");
+              if (!newStatus) return;
+              const { error } = await window.db.from('activities').update({ status: newStatus }).eq('id', id);
+              if (error) alert("Error: " + error.message);
+              else await window.loadActivities();
+            };
+
+            window.cancelActivity = async function(id) {
+              if (!confirm("Are you sure you want to cancel this activity?")) return;
+              const { error } = await window.db.from('activities').update({ status: 'Cancelled' }).eq('id', id);
+              if (error) alert("Error: " + error.message);
+              else await window.loadActivities();
+            };
+
+            window.openActivityModal = function() {
+              document.getElementById('addActivityForm').reset();
+              document.getElementById('addActivityModal').style.display = 'flex';
+            };
+
+            window.closeActivityModal = function() {
+              document.getElementById('addActivityModal').style.display = 'none';
+            };
+
+            document.getElementById('addActivityForm').onsubmit = async function(e) {
+              e.preventDefault(); 
+              
+              const submitBtn = document.getElementById('saveActivityBtn');
+              const originalText = submitBtn.innerText;
+              submitBtn.innerText = 'Saving...';
+              submitBtn.disabled = true;
+
+              const newActivityData = {
+                title: document.getElementById('newActTitle').value,
+                type: document.getElementById('newActType').value,
+                organization: document.getElementById('newActOrg').value,
+                activity_date: document.getElementById('newActDate').value,
+                end_date: document.getElementById('newActEndDate').value,
+                start_time: document.getElementById('newActStartTime').value,
+                end_time: document.getElementById('newActEndTime').value,
+                venue: document.getElementById('newActVenue').value,
+                participants: document.getElementById('newActParticipants').value,
+                status: document.getElementById('newActStatus').value
+              };
+
+              const { error } = await window.db.from('activities').insert([newActivityData]);
+
+              if (error) {
+                alert("Failed to save activity: " + error.message);
+              } else {
+                window.closeActivityModal();
+                await window.loadActivities(); 
+              }
+
+              submitBtn.innerText = originalText;
+              submitBtn.disabled = false;
+            };
+
+            window.loadActivities();
+          }
+        </script>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="js/sidebar.js"></script>
+<script src="js/topbar.js"></script>
+</body>
+</html>

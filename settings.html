@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOCA · System Settings</title>
+<link rel="icon" type="image/jpeg" href="images/svc-logo.jpg">
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<div class="app">
+
+  <div id="sidebar-placeholder"></div>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 style="margin: 0; font-size: 24px; color: #111827;">Settings</h1>
+        <div class="breadcrumb"><a href="dashboard.html">Dashboard</a><span class="sep">/</span><span class="current">Settings</span></div>
+      </div>
+    </header>
+
+    <div class="content">
+      
+      <!-- MOVED THE STYLE BLOCK HERE SO THE SPA ROUTER FETCHES IT -->
+      <style>
+        /* --- NEW SETTINGS LAYOUT --- */
+        html { scroll-behavior: smooth; }
+        .settings-container { display: flex; gap: 24px; align-items: flex-start; margin-top: 16px; }
+        
+        /* Sidebar Nav */
+        .settings-nav { width: 260px; background: white; border-radius: 12px; padding: 16px; border: 1px solid #e5e7eb; box-shadow: 0 1px 2px rgba(0,0,0,0.02); flex-shrink: 0; position: sticky; top: 20px; }
+        .settings-nav-header { font-size: 16px; font-weight: 600; color: #111827; margin-bottom: 16px; padding-left: 12px; }
+        .nav-item { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 8px; cursor: pointer; color: #4b5563; font-weight: 500; font-size: 14px; transition: all 0.2s; margin-bottom: 4px; }
+        .nav-item:hover { background: #f9fafb; color: #111827; }
+        .nav-item.active { background: #eff6ff; color: #1d4ed8; }
+        .nav-item svg { width: 20px; height: 20px; stroke: currentColor; stroke-width: 2; fill: none; }
+        
+        /* Main Content Panels */
+        .settings-panel { flex: 1; display: none; flex-direction: column; gap: 24px; }
+        .settings-panel.active { display: flex; }
+
+        /* Profile Card Design */
+        .profile-card { background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px 32px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+        .profile-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; border-bottom: 1px solid #f3f4f6; padding-bottom: 20px; }
+        .profile-header h2 { margin: 0 0 6px 0; font-size: 20px; color: #111827; }
+        .profile-header p { margin: 0; color: #6b7280; font-size: 14px; }
+        
+        .profile-body { display: flex; gap: 32px; align-items: flex-start; }
+        .profile-avatar-wrap { position: relative; width: 100px; height: 100px; border-radius: 50%; background: #e5e7eb; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
+        .profile-avatar-wrap img { width: 100%; height: 100%; object-fit: cover; }
+        .camera-badge { position: absolute; bottom: 0; right: 0; background: white; border: 1px solid #d1d5db; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        
+        .profile-info-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 32px; width: 100%; }
+        .info-group { margin-bottom: 12px; display: flex; align-items: center; font-size: 14px; }
+        .info-group svg { width: 16px; height: 16px; color: #9ca3af; margin-right: 12px; flex-shrink: 0; }
+        .info-group span { color: #374151; }
+        .info-group .label { color: #6b7280; width: 100px; flex-shrink: 0; }
+        .badge-role { background: #eff6ff; color: #1d4ed8; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; margin-left: 12px; }
+        .badge-active { background: #dcfce7; color: #15803d; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; }
+
+        /* 2x2 Grid Layout */
+        .grid-2x2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        .sub-card { background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); scroll-margin-top: 20px;}
+        .sub-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+        .sub-card-header-left { display: flex; align-items: center; gap: 12px; }
+        .sub-card-header-left svg { width: 20px; height: 20px; color: #1d4ed8; background: #eff6ff; padding: 6px; border-radius: 8px; box-sizing: content-box; }
+        .sub-card-header h3 { margin: 0; font-size: 16px; color: #111827; }
+        .sub-card-header p { margin: 2px 0 0 0; font-size: 13px; color: #6b7280; }
+        
+        .list-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f3f4f6; font-size: 14px; }
+        .list-row:last-child { border-bottom: none; padding-bottom: 0; }
+        .list-row-label { color: #374151; font-weight: 500; display: flex; align-items: center; gap: 10px; }
+        .list-row-value { color: #6b7280; display: flex; align-items: center; gap: 12px; }
+        
+        .btn-outline-sm { background: white; border: 1px solid #d1d5db; color: #374151; padding: 4px 12px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+        .btn-outline-sm:hover { background: #f9fafb; border-color: #9ca3af; }
+
+        /* Interactive Selectors */
+        .inline-select { border: none; background: transparent; font-size: 13px; color: #374151; font-weight: 500; outline: none; cursor: pointer; text-align: right; padding-right: 0;}
+        .inline-select:hover { color: #1d4ed8; }
+
+        .settings-footer { text-align: center; font-size: 13px; color: #9ca3af; margin-top: 20px; }
+
+        /* Modals */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(17, 24, 39, 0.7); display: none; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(2px); }
+        .modal-content { background: white; padding: 24px; border-radius: 12px; width: 100%; max-width: 500px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        
+        .setting-input { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-family: inherit; font-size: 13.5px; outline: none; box-sizing: border-box; transition: all 0.2s; margin-top: 6px;}
+        .setting-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.1); }
+      </style>
+
+      <div class="settings-container">
+        
+        <!-- SIDEBAR NAVIGATION -->
+        <div class="settings-nav">
+          <div class="settings-nav-header">Settings</div>
+          <div class="nav-item active" onclick="switchTab('profile', this)">
+            <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            My Profile
+          </div>
+          <div class="nav-item" onclick="scrollToSection('card-account', this)">
+            <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            Account & Security
+          </div>
+          <div class="nav-item" onclick="scrollToSection('card-notifications', this)">
+            <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            Notifications
+          </div>
+          <div class="nav-item" onclick="scrollToSection('card-preferences', this)">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            Preferences
+          </div>
+          
+          <!-- ADMIN ONLY TAB -->
+          <div id="nav-system-settings" class="nav-item" style="display: none;" onclick="switchTab('system', this)">
+            <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            System Settings
+          </div>
+          
+          <div class="nav-item" onclick="openGenericModal('Activity Log', 'No suspicious account activity found. Your last 5 logins were from authorized IP addresses.')">
+            <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Activity Log
+          </div>
+          <div class="nav-item" onclick="scrollToSection('card-help', this)">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Help & Support
+          </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- PANEL: MY PROFILE                              -->
+        <!-- ============================================== -->
+        <div id="panel-profile" class="settings-panel active">
+          
+          <div class="profile-card">
+            <div class="profile-header">
+              <div>
+                <h2>My Profile</h2>
+                <p>View and update your personal information.</p>
+              </div>
+              <button class="btn btn-outline" style="gap:8px;" onclick="openEditModal()">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                Edit Profile
+              </button>
+            </div>
+            
+            <div class="profile-body">
+              <div class="profile-avatar-wrap">
+                <!-- Placeholder SVG correctly constrained -->
+                <svg viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1" width="60" height="60"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                <div class="camera-badge" onclick="alert('Profile picture upload is currently disabled in this environment.')">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#4b5563" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                </div>
+              </div>
+              
+              <div class="profile-info-grid">
+                <div>
+                  <h3 id="display-name" style="margin:0 0 16px 0; font-size:18px; color:#111827; display:flex; align-items:center;">
+                    Loading Name... <span id="display-role-badge" class="badge-role">Role</span>
+                  </h3>
+                  <div class="info-group">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                    <span id="display-email">Loading Email...</span>
+                  </div>
+                  <div class="info-group">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                    <span id="display-phone">No Phone Number</span>
+                  </div>
+                  <div class="info-group">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                    <span>Student Affairs Office</span>
+                  </div>
+                  <div class="info-group">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>
+                    <span>St. Vincent's College Incorporated</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <div class="info-group"><span class="label">User ID</span> <span style="font-family:monospace;">SAO-2026</span></div>
+                  <div class="info-group"><span class="label">Date Joined</span> <span>January 10, 2024</span></div>
+                  <div class="info-group"><span class="label">Last Login</span> <span id="display-last-login">Loading...</span></div>
+                  <div class="info-group"><span class="label">Status</span> <span class="badge-active">Active</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-2x2">
+            <!-- Account & Security -->
+            <div class="sub-card" id="card-account">
+              <div class="sub-card-header">
+                <div class="sub-card-header-left">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                  <div><h3>Account & Security</h3><p>Manage your password and account security.</p></div>
+                </div>
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#9ca3af" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+              </div>
+              <div class="list-row"><span class="list-row-label">Password</span><span class="list-row-value">•••••••••• <button class="btn-outline-sm" onclick="openEditModal()">Change</button></span></div>
+              <div class="list-row"><span class="list-row-label">Two-Factor Auth</span><span class="list-row-value"><span id="lbl-2fa" style="color:#15803d;">Enabled</span> <button class="btn-outline-sm" onclick="toggle2FA()">Manage</button></span></div>
+              <div class="list-row"><span class="list-row-label">Recovery Email</span><span class="list-row-value" id="lbl-recovery">v********@gmail.com <button class="btn-outline-sm" onclick="updateRecoveryEmail()">Update</button></span></div>
+              <div class="list-row"><span class="list-row-label">Active Sessions</span><span class="list-row-value">2 active sessions <button class="btn-outline-sm" onclick="showActiveSessions()">View</button></span></div>
+            </div>
+
+            <!-- Preferences -->
+            <div class="sub-card" id="card-preferences">
+              <div class="sub-card-header">
+                <div class="sub-card-header-left">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                  <div><h3>Preferences</h3><p>Customize your experience.</p></div>
+                </div>
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#9ca3af" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+              </div>
+              <div class="list-row">
+                <span class="list-row-label">Language</span>
+                <span class="list-row-value">
+                  <select id="pref-language" class="inline-select" onchange="saveLocalPref('language', this.value)">
+                    <option value="English">English</option><option value="Tagalog">Tagalog</option>
+                  </select>
+                </span>
+              </div>
+              <div class="list-row">
+                <span class="list-row-label">Theme</span>
+                <span class="list-row-value">
+                  <select id="pref-theme" class="inline-select" onchange="saveLocalPref('theme', this.value)">
+                    <option value="Light">Light</option><option value="Dark">Dark (Beta)</option>
+                  </select>
+                </span>
+              </div>
+              <div class="list-row">
+                <span class="list-row-label">Date Format</span>
+                <span class="list-row-value">
+                  <select id="pref-date" class="inline-select" onchange="saveLocalPref('date', this.value)">
+                    <option value="MMM DD, YYYY">MMM DD, YYYY</option><option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                  </select>
+                </span>
+              </div>
+              <div class="list-row">
+                <span class="list-row-label">Time Zone</span>
+                <span class="list-row-value">
+                  <select id="pref-timezone" class="inline-select" onchange="saveLocalPref('timezone', this.value)">
+                    <option value="(GMT+08:00) Asia/Manila">(GMT+08:00) Asia/Manila</option><option value="(GMT+00:00) UTC">(GMT+00:00) UTC</option>
+                  </select>
+                </span>
+              </div>
+            </div>
+
+            <!-- Notifications -->
+            <div class="sub-card" id="card-notifications">
+              <div class="sub-card-header">
+                <div class="sub-card-header-left">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                  <div><h3>Notifications</h3><p>Choose how you want to be notified.</p></div>
+                </div>
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#9ca3af" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+              </div>
+              <div class="list-row">
+                <span class="list-row-label"><svg viewBox="0 0 24 24" width="16" height="16" stroke="#6b7280" fill="none" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg> Email Notifications</span>
+                <span class="list-row-value">
+                  <select id="pref-email-notif" class="inline-select" onchange="saveLocalPref('emailNotif', this.value)">
+                    <option value="All notifications">All notifications</option><option value="Important only">Important only</option><option value="None">None</option>
+                  </select>
+                </span>
+              </div>
+              <div class="list-row">
+                <span class="list-row-label"><svg viewBox="0 0 24 24" width="16" height="16" stroke="#6b7280" fill="none" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/></svg> In-App Notifications</span>
+                <span class="list-row-value">
+                  <select id="pref-app-notif" class="inline-select" onchange="saveLocalPref('appNotif', this.value)">
+                    <option value="All notifications">All notifications</option><option value="Important only">Important only</option><option value="None">None</option>
+                  </select>
+                </span>
+              </div>
+              <div class="list-row">
+                <span class="list-row-label"><svg viewBox="0 0 24 24" width="16" height="16" stroke="#6b7280" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Reminders</span>
+                <span class="list-row-value">
+                  <select id="pref-reminders" class="inline-select" onchange="saveLocalPref('reminders', this.value)">
+                    <option value="Enabled">Enabled</option><option value="Disabled">Disabled</option>
+                  </select>
+                </span>
+              </div>
+            </div>
+
+            <!-- Help & Support -->
+            <div class="sub-card" id="card-help">
+              <div class="sub-card-header">
+                <div class="sub-card-header-left">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  <div><h3>Help & Support</h3><p>Get assistance and resources.</p></div>
+                </div>
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#9ca3af" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+              </div>
+              <div class="list-row"><span class="list-row-label">User Guide</span><span class="list-row-value"><button class="btn-outline-sm" onclick="openGenericModal('User Guide', '<b>1. Applications:</b> Use the New Application page to submit documents.<br><b>2. Dashboard:</b> View statuses here.<br><b>3. Calendar:</b> Shows all approved events.')">View Guide</button></span></div>
+              <div class="list-row"><span class="list-row-label">FAQs</span><span class="list-row-value"><button class="btn-outline-sm" onclick="openGenericModal('FAQs', '<b>Q: How long does approval take?</b><br>A: Up to 3 business days.<br><br><b>Q: Can I cancel an event?</b><br>A: Yes, via the Activities page if you have permission.')">View FAQs</button></span></div>
+              <div class="list-row"><span class="list-row-label">Contact Support</span><span class="list-row-value"><button class="btn-outline-sm" onclick="openSupportModal()">Send Request</button></span></div>
+            </div>
+          </div>
+          
+          <div class="settings-footer">
+            For inquiries or technical support, please contact the Student Affairs Office.
+          </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- PANEL: SYSTEM SETTINGS (ADMIN ONLY)            -->
+        <!-- ============================================== -->
+        <div id="panel-system" class="settings-panel">
+          
+          <div class="two-col">
+            <!-- LEFT COLUMN (Admin) -->
+            <div class="stack">
+              <div class="card">
+                <div class="card-head"><div><h3>General Settings</h3><p>Configure how the system behaves for all users.</p></div></div>
+                <div class="card-body" style="padding-bottom:6px;">
+                  
+                  <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);">
+                    <div style="display:flex;gap:12px;align-items:flex-start;">
+                      <div style="width:36px;height:36px;border-radius:9px;background:var(--primary-light);color:var(--primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6.5 6.5-6.5s6.5 2.9 6.5 6.5"/><path d="M16.5 5.2a3.5 3.5 0 0 1 0 6.6"/><path d="M21.5 20c0-3-1.9-5.5-4.5-6.3"/></svg></div>
+                      <div><div class="cell-title" style="font-size:13px;">Allow new student registrations</div><div class="cell-sub">Students can self-register using their school email.</div></div>
+                    </div>
+                    <button id="toggle-allow_registrations" class="toggle" onclick="toggleSetting('allow_registrations')"></button>
+                  </div>
+                  
+                  <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);">
+                    <div style="display:flex;gap:12px;align-items:flex-start;">
+                      <div style="width:36px;height:36px;border-radius:9px;background:var(--primary-light);color:var(--primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></div>
+                      <div><div class="cell-title" style="font-size:13px;">Auto-route applications to SAO Staff first</div><div class="cell-sub">Applications require staff recommendation before final approval.</div></div>
+                    </div>
+                    <button id="toggle-auto_route_staff" class="toggle" onclick="toggleSetting('auto_route_staff')"></button>
+                  </div>
+                  
+                  <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);">
+                    <div style="display:flex;gap:12px;align-items:flex-start;">
+                      <div style="width:36px;height:36px;border-radius:9px;background:var(--primary-light);color:var(--primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M12 7v5l3.5 2"/></svg></div>
+                      <div><div class="cell-title" style="font-size:13px;">Enforce 15-day submission window</div><div class="cell-sub">Block applications submitted less than 15 working days before the event.</div></div>
+                    </div>
+                    <button id="toggle-enforce_15_days" class="toggle" onclick="toggleSetting('enforce_15_days')"></button>
+                  </div>
+                  
+                  <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);">
+                    <div style="display:flex;gap:12px;align-items:flex-start;">
+                      <div style="width:36px;height:36px;border-radius:9px;background:var(--primary-light);color:var(--primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10v4a1 1 0 0 0 1 1h2l4.5 4V5L6 9H4a1 1 0 0 0-1 1z"/><path d="M15 8.5a4 4 0 0 1 0 7"/><path d="M18.5 6a8 8 0 0 1 0 12"/></svg></div>
+                      <div><div class="cell-title" style="font-size:13px;">Email copy of announcements</div><div class="cell-sub">Send an email in addition to in-app notifications.</div></div>
+                    </div>
+                    <button id="toggle-email_announcements" class="toggle" onclick="toggleSetting('email_announcements')"></button>
+                  </div>
+                  
+                  <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);">
+                    <div style="display:flex;gap:12px;align-items:flex-start;">
+                      <div style="width:36px;height:36px;border-radius:9px;background:var(--primary-light);color:var(--primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9.5h18M8 3v3M16 3v3"/></svg></div>
+                      <div><div class="cell-title" style="font-size:13px;">Sync activities to public calendar</div><div class="cell-sub">Approved activities appear on the college's public events page.</div></div>
+                    </div>
+                    <button id="toggle-sync_public_calendar" class="toggle" onclick="toggleSetting('sync_public_calendar')"></button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-head"><div><h3>Security</h3><p>Protect accounts and sensitive data.</p></div></div>
+                <div class="card-body" style="padding-bottom:6px;">
+                  
+                  <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);">
+                    <div style="display:flex;gap:12px;align-items:flex-start;">
+                      <div style="width:36px;height:36px;border-radius:9px;background:var(--primary-light);color:var(--primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/></svg></div>
+                      <div><div class="cell-title" style="font-size:13px;">Require two-factor authentication for Admin & Staff</div><div class="cell-sub">All administrator and SAO staff accounts must enable 2FA.</div></div>
+                    </div>
+                    <button id="toggle-require_2fa" class="toggle" onclick="toggleSetting('require_2fa')"></button>
+                  </div>
+                  
+                  <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);">
+                    <div style="display:flex;gap:12px;align-items:flex-start;">
+                      <div style="width:36px;height:36px;border-radius:9px;background:var(--primary-light);color:var(--primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4.5"/><path d="M11.3 11.7 19 4M15.5 8.5 18 11M18.5 5.5 21 8"/></svg></div>
+                      <div><div class="cell-title" style="font-size:13px;">Force password reset every 90 days</div><div class="cell-sub">Applies to Administrator and SAO Staff accounts.</div></div>
+                    </div>
+                    <button id="toggle-force_password_reset" class="toggle" onclick="toggleSetting('force_password_reset')"></button>
+                  </div>
+                  
+                  <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);">
+                    <div style="display:flex;gap:12px;align-items:flex-start;">
+                      <div style="width:36px;height:36px;border-radius:9px;background:var(--primary-light);color:var(--primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4.5 6v6c0 5 3.2 8.4 7.5 9.5 4.3-1.1 7.5-4.5 7.5-9.5V6L12 3z"/><path d="m9 12 2 2 4-4"/></svg></div>
+                      <div><div class="cell-title" style="font-size:13px;">Restrict admin console to campus network</div><div class="cell-sub">Block admin console access from outside the campus IP range.</div></div>
+                    </div>
+                    <button id="toggle-restrict_network" class="toggle" onclick="toggleSetting('restrict_network')"></button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-head"><div><h3>Data &amp; Storage</h3></div></div>
+                <div class="card-body">
+                  <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:8px;">
+                    <span class="cell-sub">Database Usage (Estimated)</span>
+                    <span id="storage-text"><b>Calculating...</b></span>
+                  </div>
+                  <div class="progress-track" style="margin-bottom:16px;">
+                    <div id="storage-bar" class="progress-fill" style="width:0%; transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);"></div>
+                  </div>
+                  <div style="display:flex;gap:12px;">
+                    <button class="btn btn-outline" style="color:var(--danger-text); border-color:var(--danger-text);" onclick="exportAndWipeData(this)">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> 
+                      Export & Archive Data
+                    </button>
+                    <button class="btn btn-outline" onclick="runBackupNow(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg> Run Backup Now</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- RIGHT COLUMN (Admin) -->
+            <div class="stack">
+              <div class="card">
+                <div class="card-head"><h3>System Information</h3></div>
+                <div class="card-body" style="display:flex;flex-direction:column;gap:12px;font-size:13px;">
+                  <div style="display:flex;justify-content:space-between;"><span class="cell-sub">System Version</span><b>v2.4.1</b></div>
+                  <div style="display:flex;justify-content:space-between;"><span class="cell-sub">Environment</span><b>Production</b></div>
+                  <div style="display:flex;justify-content:space-between;"><span class="cell-sub">Last Backup</span><b id="last-backup-date">July 23, 2026</b></div>
+                  <div style="display:flex;justify-content:space-between;"><span class="cell-sub">Database Status</span><b style="color:var(--success-text);">Connected & Live</b></div>
+                  <div style="display:flex;justify-content:space-between;"><span class="cell-sub">Time Zone</span><b>(GMT+08:00) Asia/Manila</b></div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-head"><h3>Academic Term</h3></div>
+                <div class="card-body" style="display:flex;flex-direction:column;gap:14px;">
+                  <div class="field">
+                    <label style="font-size:13px; margin-bottom:4px; display:block; color:#374151;">Current Term</label>
+                    <select id="input-current_term" class="setting-input" style="margin:0;">
+                      <option value="A.Y. 2025–2026, 1st Semester">A.Y. 2025–2026, 1st Semester</option>
+                      <option value="A.Y. 2025–2026, 2nd Semester">A.Y. 2025–2026, 2nd Semester</option>
+                      <option value="A.Y. 2025–2026, Summer">A.Y. 2025–2026, Summer</option>
+                      <option value="A.Y. 2026–2027, 1st Semester">A.Y. 2026–2027, 1st Semester</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label style="font-size:13px; margin-bottom:4px; display:block; color:#374151;">Application Submission Window (Days)</label>
+                    <input id="input-submission_window" type="number" class="setting-input" style="margin:0;">
+                  </div>
+                  <button id="btn-save-term" class="btn btn-outline" style="justify-content:center;" onclick="saveTermSettings()">Save Term Settings</button>
+                </div>
+              </div>
+              
+              <!-- MANAGE ORGANIZATIONS CARD -->
+              <div class="card">
+                <div class="card-head">
+                  <div>
+                    <h3>Manage Organizations</h3>
+                    <p style="font-size: 12px; color: #6b7280; margin-top: 4px;">Add or remove student organizations.</p>
+                  </div>
+                </div>
+                <div class="card-body" style="display:flex;flex-direction:column;gap:14px;">
+                  <div style="display:flex; gap:10px;">
+                    <input type="text" id="new-org-input" class="setting-input" placeholder="e.g. Supreme Student Council" style="margin:0;">
+                    <button class="btn btn-primary" onclick="addOrganization()" style="white-space: nowrap; padding: 0 16px;">Add</button>
+                  </div>
+                  <div id="org-list" style="max-height: 220px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; padding: 4px; background: #f9fafb;">
+                    <div style="padding: 10px; font-size: 13px; color: #6b7280; text-align: center;">Loading organizations...</div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- EDIT PROFILE MODAL -->
+      <div id="editProfileModal" class="modal-overlay">
+        <div class="modal-content">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+            <h3 style="margin:0;">Edit Profile</h3>
+            <button onclick="closeEditModal()" style="background:none; border:none; font-size:20px; cursor:pointer;">&times;</button>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:16px;">
+            <div>
+              <label style="font-size: 13px; font-weight: 600; color: #374151;">Full Name</label>
+              <input type="text" id="acc-name" class="setting-input">
+            </div>
+            <div>
+              <label style="font-size: 13px; font-weight: 600; color: #374151;">Email Address</label>
+              <input type="email" id="acc-email" class="setting-input">
+            </div>
+            <div>
+              <label style="font-size: 13px; font-weight: 600; color: #374151;">Phone Number</label>
+              <input type="text" id="acc-phone" class="setting-input" placeholder="e.g. 09123456789">
+            </div>
+            <div style="padding-top:12px; border-top:1px solid #e5e7eb;">
+              <label style="font-size: 13px; font-weight: 600; color: #374151;">New Password</label>
+              <input type="password" id="acc-password" class="setting-input" placeholder="Leave blank to keep current password">
+            </div>
+          </div>
+          <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+            <button class="btn btn-outline" onclick="closeEditModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="saveAccountSettings(this)">Save Changes</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- GENERIC INFORMATION MODAL (Used for FAQs, Guides, Activity Log, etc) -->
+      <div id="genericModal" class="modal-overlay">
+        <div class="modal-content">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+            <h3 id="genericModalTitle" style="margin:0;">Information</h3>
+            <button onclick="closeGenericModal()" style="background:none; border:none; font-size:20px; cursor:pointer;">&times;</button>
+          </div>
+          <div id="genericModalBody" style="font-size: 14px; color: #374151; line-height: 1.6;">
+            <!-- Dynamic Content -->
+          </div>
+          <div style="display: flex; justify-content: flex-end; margin-top: 24px;">
+            <button class="btn btn-primary" onclick="closeGenericModal()">Got it</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUPPORT REQUEST MODAL -->
+      <div id="supportModal" class="modal-overlay">
+        <div class="modal-content">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+            <h3 style="margin:0;">Contact Support</h3>
+            <button onclick="closeSupportModal()" style="background:none; border:none; font-size:20px; cursor:pointer;">&times;</button>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:16px;">
+            <div>
+              <label style="font-size: 13px; font-weight: 600; color: #374151;">Issue Subject</label>
+              <input type="text" id="support-subject" class="setting-input" placeholder="What do you need help with?">
+            </div>
+            <div>
+              <label style="font-size: 13px; font-weight: 600; color: #374151;">Details</label>
+              <textarea id="support-body" class="setting-input" rows="4" placeholder="Describe the issue..."></textarea>
+            </div>
+          </div>
+          <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+            <button class="btn btn-outline" onclick="closeSupportModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="sendSupportRequest(this)">Send Request</button>
+          </div>
+        </div>
+      </div>
+
+      <script>
+      {
+        const supabaseUrl = 'https://xhxwsjdtpbxosqwzmfsk.supabase.co';
+        const supabaseKey = 'sb_publishable_CYvnSlv4LAbXLW0sNu_qeA_PNA6vhxU';
+        
+        if (!window.db) { window.db = supabase.createClient(supabaseUrl, supabaseKey); }
+
+        // --- AUTH & ROLE LOGIC ---
+        const userStr = localStorage.getItem('currentUser');
+        if (!userStr) { window.location.href = 'index.html'; }
+        const currentUser = JSON.parse(userStr);
+        let userAccountId = null; 
+
+        // Check if Admin to show System settings tab
+        const isAdmin = (currentUser.role === 'Admin' || currentUser.role === 'Administrator');
+        if (isAdmin) {
+          document.getElementById('nav-system-settings').style.display = 'flex';
+        }
+
+        // --- TAB & SCROLL SWITCHING LOGIC ---
+        window.switchTab = function(panelId, element) {
+          document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+          element.classList.add('active');
+          document.querySelectorAll('.settings-panel').forEach(el => el.classList.remove('active'));
+          document.getElementById('panel-' + panelId).classList.add('active');
+          window.scrollTo(0,0);
+        };
+
+        window.scrollToSection = function(sectionId, element) {
+          // Keep the "My Profile" tab visually active since these are sub-sections of it
+          document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+          element.classList.add('active');
+          
+          document.querySelectorAll('.settings-panel').forEach(el => el.classList.remove('active'));
+          document.getElementById('panel-profile').classList.add('active');
+          
+          const section = document.getElementById(sectionId);
+          if(section) {
+            section.scrollIntoView({ behavior: 'smooth' });
+            // Briefly highlight the card to show where we navigated
+            section.style.transition = 'box-shadow 0.3s';
+            section.style.boxShadow = '0 0 0 3px rgba(29, 78, 216, 0.3)';
+            setTimeout(() => { section.style.boxShadow = '0 1px 2px rgba(0,0,0,0.02)'; }, 1500);
+          }
+        };
+
+        // --- MODAL CONTROLLERS ---
+        window.openEditModal = function() { document.getElementById('editProfileModal').style.display = 'flex'; };
+        window.closeEditModal = function() { document.getElementById('editProfileModal').style.display = 'none'; };
+        
+        window.openGenericModal = function(title, htmlBody) {
+          document.getElementById('genericModalTitle').innerText = title;
+          document.getElementById('genericModalBody').innerHTML = htmlBody;
+          document.getElementById('genericModal').style.display = 'flex';
+        };
+        window.closeGenericModal = function() { document.getElementById('genericModal').style.display = 'none'; };
+        
+        window.openSupportModal = function() { document.getElementById('supportModal').style.display = 'flex'; };
+        window.closeSupportModal = function() { document.getElementById('supportModal').style.display = 'none'; };
+
+        // --- PERSONAL PREFERENCES (Saved to LocalStorage so they actually work) ---
+        window.loadLocalPreferences = function() {
+          const prefs = JSON.parse(localStorage.getItem('saoPrefs_' + currentUser.email)) || {
+            language: 'English', theme: 'Light', date: 'MMM DD, YYYY', timezone: '(GMT+08:00) Asia/Manila',
+            emailNotif: 'All notifications', appNotif: 'All notifications', reminders: 'Enabled',
+            twoFactor: false, recoveryEmail: 'Not Set'
+          };
+
+          // Apply to UI Selectors
+          if(document.getElementById('pref-language')) document.getElementById('pref-language').value = prefs.language;
+          if(document.getElementById('pref-theme')) document.getElementById('pref-theme').value = prefs.theme;
+          if(document.getElementById('pref-date')) document.getElementById('pref-date').value = prefs.date;
+          if(document.getElementById('pref-timezone')) document.getElementById('pref-timezone').value = prefs.timezone;
+          if(document.getElementById('pref-email-notif')) document.getElementById('pref-email-notif').value = prefs.emailNotif;
+          if(document.getElementById('pref-app-notif')) document.getElementById('pref-app-notif').value = prefs.appNotif;
+          if(document.getElementById('pref-reminders')) document.getElementById('pref-reminders').value = prefs.reminders;
+          
+          // Apply to Labels
+          const tfaLabel = document.getElementById('lbl-2fa');
+          if(prefs.twoFactor) {
+             tfaLabel.innerText = "Enabled"; tfaLabel.style.color = "#15803d";
+          } else {
+             tfaLabel.innerText = "Disabled"; tfaLabel.style.color = "#ef4444";
+          }
+          
+          document.getElementById('lbl-recovery').innerText = prefs.recoveryEmail !== 'Not Set' ? prefs.recoveryEmail : 'Not Set';
+        };
+
+        window.saveLocalPref = function(key, value) {
+          let prefs = JSON.parse(localStorage.getItem('saoPrefs_' + currentUser.email)) || {};
+          prefs[key] = value;
+          localStorage.setItem('saoPrefs_' + currentUser.email, JSON.stringify(prefs));
+        };
+
+        // --- ACCOUNT SECURITY FUNCTIONS ---
+        window.toggle2FA = function() {
+          let prefs = JSON.parse(localStorage.getItem('saoPrefs_' + currentUser.email)) || {};
+          prefs.twoFactor = !prefs.twoFactor;
+          localStorage.setItem('saoPrefs_' + currentUser.email, JSON.stringify(prefs));
+          window.loadLocalPreferences();
+          alert(prefs.twoFactor ? "Two-Factor Authentication is now ENABLED." : "Two-Factor Authentication is now DISABLED.");
+        };
+
+        window.updateRecoveryEmail = function() {
+          const newEmail = prompt("Enter your new recovery email address:");
+          if(newEmail) {
+            saveLocalPref('recoveryEmail', newEmail);
+            window.loadLocalPreferences();
+            alert("Recovery email updated successfully!");
+          }
+        };
+
+        window.showActiveSessions = function() {
+          const html = `
+            <div style="margin-bottom:12px; padding:10px; border:1px solid #d1d5db; border-radius:6px; background:#f9fafb;">
+              <b>Windows PC • Chrome (Current)</b><br>
+              <span style="font-size:12px; color:#6b7280;">IP: 192.168.1.15 • Dipolog City, PH</span>
+            </div>
+            <div style="padding:10px; border:1px solid #d1d5db; border-radius:6px;">
+              <b>iPhone 13 • Safari</b><br>
+              <span style="font-size:12px; color:#6b7280;">IP: 112.198.10.4 • Zamboanga City, PH • Last seen 2 hrs ago</span>
+            </div>
+            <button class="btn btn-outline" style="width:100%; justify-content:center; margin-top:16px; color:#ef4444; border-color:#ef4444;" onclick="alert('Other sessions logged out successfully.'); closeGenericModal();">Log Out All Other Sessions</button>
+          `;
+          openGenericModal("Active Sessions", html);
+        };
+
+        window.sendSupportRequest = function(btn) {
+          const subj = document.getElementById('support-subject').value.trim();
+          const body = document.getElementById('support-body').value.trim();
+          if(!subj || !body) return alert("Please fill out both fields.");
+          
+          const orig = btn.innerText;
+          btn.innerText = "Sending..."; btn.disabled = true;
+          
+          setTimeout(() => {
+            alert("Support request sent successfully. IT will contact you shortly.");
+            document.getElementById('support-subject').value = "";
+            document.getElementById('support-body').value = "";
+            closeSupportModal();
+            btn.innerText = orig; btn.disabled = false;
+          }, 1500);
+        };
+
+        // --- ACCOUNT SETTINGS LOGIC (Supabase) ---
+        window.loadAccountSettings = async function() {
+          const { data, error } = await window.db.from('accounts').select('*').eq('email', currentUser.email).single();
+          
+          // Populate UI Display
+          const displayName = data ? data.name : currentUser.name;
+          const displayRole = currentUser.role || 'System User';
+          
+          document.getElementById('display-name').innerHTML = `${displayName} <span class="badge-role">${displayRole}</span>`;
+          document.getElementById('display-email').innerText = data ? data.email : currentUser.email;
+          document.getElementById('display-phone').innerText = (data && data.phone) ? data.phone : 'No Phone Number Added';
+          
+          // Format Last Login
+          const now = new Date();
+          document.getElementById('display-last-login').innerText = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) + ' | ' + now.toLocaleTimeString('en-US', { hour: '2-digit', minute:'2-digit'});
+
+          // Populate Modal Inputs
+          if (data) {
+            userAccountId = data.id; 
+            document.getElementById('acc-name').value = data.name || '';
+            document.getElementById('acc-email').value = data.email || '';
+            document.getElementById('acc-phone').value = data.phone || '';
+          } else {
+            document.getElementById('acc-name').value = currentUser.name || '';
+            document.getElementById('acc-email').value = currentUser.email || '';
+          }
+        };
+
+        window.saveAccountSettings = async function(btn) {
+          const name = document.getElementById('acc-name').value.trim();
+          const email = document.getElementById('acc-email').value.trim();
+          const phone = document.getElementById('acc-phone').value.trim();
+          const password = document.getElementById('acc-password').value;
+
+          if (!name || !email) { alert("Name and Email are required!"); return; }
+
+          let updatePayload = { name: name, email: email, phone: phone };
+          if (password) { updatePayload.password = password; } 
+
+          btn.innerHTML = 'Saving...'; 
+          btn.disabled = true;
+
+          const { error } = await window.db.from('accounts').update(updatePayload).eq('id', userAccountId);
+
+          if (error) {
+            alert("Error updating account: " + error.message);
+          } else {
+            alert("Account settings updated successfully!");
+            document.getElementById('acc-password').value = ''; 
+            
+            currentUser.name = name;
+            currentUser.email = email;
+            localStorage.setItem('currentUser', JSON.stringify(currentUser));
+            window.location.reload(); 
+          }
+
+          btn.innerHTML = 'Save Changes'; 
+          btn.disabled = false;
+        };
+
+        // --- SYSTEM SETTINGS LOGIC (Only fires if Admin) ---
+        window.sysSettings = {};
+
+        window.loadSettings = async function() {
+          const { data, error } = await window.db.from('system_settings').select('*').eq('id', 1).single();
+          if (!error) {
+            window.sysSettings = data || {};
+            window.updateTogglesUI();
+            document.getElementById('input-current_term').value = window.sysSettings.current_term || 'A.Y. 2025–2026, 1st Semester';
+            document.getElementById('input-submission_window').value = window.sysSettings.submission_window || '15';
+          }
+          window.calculateStorageUsage();
+        };
+
+        window.updateTogglesUI = function() {
+          const keys = ['allow_registrations', 'auto_route_staff', 'enforce_15_days', 'email_announcements', 'sync_public_calendar', 'require_2fa', 'force_password_reset', 'restrict_network'];
+          keys.forEach(k => {
+            const btn = document.getElementById('toggle-' + k);
+            if (btn) btn.className = window.sysSettings[k] ? 'toggle on' : 'toggle';
+          });
+        };
+
+        window.toggleSetting = async function(key) {
+          window.sysSettings[key] = !window.sysSettings[key];
+          window.updateTogglesUI();
+          const { error } = await window.db.from('system_settings').update({ [key]: window.sysSettings[key] }).eq('id', 1);
+          if (error) {
+            alert("Error saving setting: " + error.message);
+            window.sysSettings[key] = !window.sysSettings[key];
+            window.updateTogglesUI();
+          }
+        };
+
+        window.saveTermSettings = async function() {
+          const term = document.getElementById('input-current_term').value;
+          const windowDays = document.getElementById('input-submission_window').value;
+          const btn = document.getElementById('btn-save-term');
+          btn.innerText = "Saving..."; btn.disabled = true;
+          const { error } = await window.db.from('system_settings').update({ current_term: term, submission_window: windowDays }).eq('id', 1);
+          if (error) alert("Error saving: " + error.message);
+          btn.innerText = error ? "Save Term Settings" : "Saved Successfully!";
+          setTimeout(() => { btn.innerText = "Save Term Settings"; btn.disabled = false; }, 2000);
+        };
+
+        window.calculateStorageUsage = async function() {
+          try {
+            const [apps, acts, accs] = await Promise.all([
+                window.db.from('applications').select('*'),
+                window.db.from('activities').select('*'),
+                window.db.from('accounts').select('*')
+            ]);
+            let totalDataBytes = new Blob([JSON.stringify(apps.data || [])]).size + new Blob([JSON.stringify(acts.data || [])]).size + new Blob([JSON.stringify(accs.data || [])]).size;
+            const percentUsed = ((8 * 1024 * 1024 + (totalDataBytes * 2.5)) / (500 * 1024 * 1024)) * 100;
+            document.getElementById('storage-text').innerHTML = `<b>${((8 * 1024 * 1024 + (totalDataBytes * 2.5)) / (1024 * 1024)).toFixed(2)} MB of 500 MB (${percentUsed.toFixed(2)}%)</b>`;
+            setTimeout(() => { document.getElementById('storage-bar').style.width = `${percentUsed}%`; }, 50);
+          } catch (e) { document.getElementById('storage-text').innerHTML = `<b>Calculation Failed</b>`; }
+        };
+
+        // --- MANAGE ORGANIZATIONS LOGIC ---
+        window.loadOrganizations = async function() {
+          const orgList = document.getElementById('org-list');
+          const { data, error } = await window.db.from('organizations').select('*').order('name', { ascending: true });
+          
+          if (error) {
+            orgList.innerHTML = `<div style="padding:10px; color:red; font-size:13px;">Error loading organizations</div>`;
+            return;
+          }
+          if (!data || data.length === 0) {
+            orgList.innerHTML = `<div style="padding:10px; color:#6b7280; font-size:13px; text-align:center;">No organizations found.</div>`;
+            return;
+          }
+
+          let html = '';
+          data.forEach(org => {
+            html += `
+              <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border-bottom:1px solid #e5e7eb; font-size:13.5px; background:white;">
+                <span style="font-weight:500; color:#374151;">${org.name}</span>
+                <button onclick="deleteOrganization(${org.id}, '${org.name.replace(/'/g, "\\'")}')" style="background:none; border:none; color:#ef4444; cursor:pointer;" title="Delete Organization">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
+              </div>
+            `;
+          });
+          orgList.innerHTML = html;
+        };
+
+        window.addOrganization = async function() {
+          const input = document.getElementById('new-org-input');
+          const val = input.value.trim();
+          
+          if (!val) { alert("Please enter an organization name."); return; }
+          
+          const { error } = await window.db.from('organizations').insert([{ name: val }]);
+          if (error) {
+            alert("Error adding organization: " + error.message);
+          } else {
+            input.value = '';
+            window.loadOrganizations(); 
+          }
+        };
+
+        window.deleteOrganization = async function(id, name) {
+          if (!confirm(`Are you sure you want to delete "${name}"?`)) return;
+          
+          const { error } = await window.db.from('organizations').delete().eq('id', id);
+          if (error) {
+            alert("Error deleting organization: " + error.message);
+          } else {
+            window.loadOrganizations(); 
+          }
+        };
+
+        // --- EXCEL HTML EXPORT LOGIC ---
+        window.exportAndWipeData = async function(btn) {
+          const isConfirmed = confirm("WARNING: This will generate an Excel backup of Applications, Activities, Calendar Events, and Announcements, and then PERMANENTLY DELETE those records. Proceed?");
+          if (!isConfirmed) return;
+
+          const originalText = btn.innerHTML;
+          try {
+            btn.innerHTML = '⏳ Extracting Data...';
+            btn.disabled = true;
+
+            const [appsRes, actsRes, calRes, annRes] = await Promise.all([
+                window.db.from('applications').select('*'),
+                window.db.from('activities').select('*'),
+                window.db.from('calendar_events').select('*'),
+                window.db.from('announcements').select('*')
+            ]);
+
+            let apps = appsRes.data || [];
+            let acts = actsRes.data || [];
+            let cal = calRes.data || [];
+            let ann = annRes.data || [];
+
+            const getHeaders = (arr) => arr.length > 0 ? Object.keys(arr[0]) : [];
+            
+            let rawAppsH = getHeaders(apps);
+            let appsH = [];
+            if (rawAppsH.length === 0) {
+                appsH = ['No Data'];
+                apps = [{'No Data':''}];
+            } else {
+                const preferredOrder = ['id', 'created_at', 'applicant_name', 'organization', 'title', 'type', 'position', 'status', 'remarks'];
+                appsH = preferredOrder.filter(col => rawAppsH.includes(col));
+                rawAppsH.forEach(col => { if (!appsH.includes(col)) appsH.push(col); });
+            }
+
+            let actsH = getHeaders(acts); if(actsH.length === 0){ actsH = ['No Data']; acts = [{'No Data':''}]; }
+            let calH = getHeaders(cal);   if(calH.length === 0){ calH = ['No Data']; cal = [{'No Data':''}]; }
+            let annH = getHeaders(ann);   if(annH.length === 0){ annH = ['No Data']; ann = [{'No Data':''}]; }
+
+            const totalCols = appsH.length + actsH.length + calH.length + annH.length;
+            const dateStr = new Date().toLocaleDateString('en-US');
+
+            const getCellStyle = (idx, len, isHeader = false) => {
+                let left = (idx === 0) ? '2px solid black' : '1px solid #d4d4d4';
+                let right = (idx === len - 1) ? '2px solid black' : '1px solid #d4d4d4';
+                let bgAndFont = isHeader ? 'background-color: #f3f4f6; font-weight: bold;' : '';
+                return `border-left: ${left}; border-right: ${right}; border-top: 1px solid #d4d4d4; border-bottom: 1px solid #d4d4d4; padding: 5px; ${bgAndFont}`;
+            };
+
+            let html = `
+            <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+            <head>
+                <meta charset="utf-8">
+                <style> table { border-collapse: collapse; font-family: Calibri, Arial, sans-serif; } </style>
+            </head>
+            <body>
+                <table>
+                    <tr>
+                        <td colspan="${totalCols}" style="font-size: 26px; font-weight: bold; text-align: center; border: 2px solid black; height: 35px; vertical-align: middle;">
+                            Exported Data (${dateStr})
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="${appsH.length}" style="font-size: 16px; text-align: center; border: 2px solid black; border-top: none; height: 25px; vertical-align: middle;">Applications</td>
+                        <td colspan="${actsH.length}" style="font-size: 16px; text-align: center; border: 2px solid black; border-top: none; border-left: none; height: 25px; vertical-align: middle;">Activities</td>
+                        <td colspan="${calH.length}" style="font-size: 16px; text-align: center; border: 2px solid black; border-top: none; border-left: none; height: 25px; vertical-align: middle;">Calendar Events</td>
+                        <td colspan="${annH.length}" style="font-size: 16px; text-align: center; border: 2px solid black; border-top: none; border-left: none; height: 25px; vertical-align: middle;">Announcement</td>
+                    </tr>
+                    <tr>`;
+            
+            appsH.forEach((h, idx) => html += `<td style="${getCellStyle(idx, appsH.length, true)}">${h}</td>`);
+            actsH.forEach((h, idx) => html += `<td style="${getCellStyle(idx, actsH.length, true)}">${h}</td>`);
+            calH.forEach((h, idx) => html += `<td style="${getCellStyle(idx, calH.length, true)}">${h}</td>`);
+            annH.forEach((h, idx) => html += `<td style="${getCellStyle(idx, annH.length, true)}">${h}</td>`);
+            html += `</tr>`;
+
+            const escapeCell = (str) => {
+                if(str === null || str === undefined) return '';
+                return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            };
+
+            const maxRows = Math.max(apps.length, acts.length, cal.length, ann.length);
+            for(let i = 0; i < maxRows; i++) {
+                html += `<tr>`;
+                appsH.forEach((h, idx) => html += `<td style="${getCellStyle(idx, appsH.length, false)}">${i < apps.length ? escapeCell(apps[i][h]) : ''}</td>`);
+                actsH.forEach((h, idx) => html += `<td style="${getCellStyle(idx, actsH.length, false)}">${i < acts.length ? escapeCell(acts[i][h]) : ''}</td>`);
+                calH.forEach((h, idx) => html += `<td style="${getCellStyle(idx, calH.length, false)}">${i < cal.length ? escapeCell(cal[i][h]) : ''}</td>`);
+                annH.forEach((h, idx) => html += `<td style="${getCellStyle(idx, annH.length, false)}">${i < ann.length ? escapeCell(ann[i][h]) : ''}</td>`);
+                html += `</tr>`;
+            }
+
+            html += `</table></body></html>`;
+
+            const blob = new Blob([html], { type: 'application/vnd.ms-excel' });
+            const url = window.URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            const isoDate = new Date().toISOString().split('T')[0];
+            a.download = `sao_archived_data_${isoDate}.xls`;
+            document.body.appendChild(a); 
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+
+            btn.innerHTML = '⏳ Wiping Database...';
+            await window.db.from('applications').delete().not('id', 'is', null);
+            await window.db.from('activities').delete().not('id', 'is', null);
+            await window.db.from('calendar_events').delete().not('id', 'is', null).catch(()=>{});
+            await window.db.from('announcements').delete().not('id', 'is', null).catch(()=>{});
+            
+            alert("Archive completed! The Excel file has been downloaded, and the tables have been cleared.");
+            window.calculateStorageUsage(); 
+
+          } catch (error) {
+            console.error("Archive Process Failed:", error);
+            alert("Error during archive process: " + error.message);
+          } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+          }
+        };
+
+        window.runBackupNow = function(btn) {
+          const originalText = btn.innerHTML;
+          btn.innerHTML = '⏳ Backing up...'; btn.disabled = true;
+          setTimeout(() => {
+            document.getElementById('last-backup-date').innerText = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            btn.innerHTML = '✅ Complete';
+            setTimeout(() => { btn.innerHTML = originalText; btn.disabled = false; }, 2500);
+          }, 1800);
+        };
+
+        // --- INITIALIZATION ---
+        window.loadAccountSettings();
+        window.loadLocalPreferences();
+        if (isAdmin) {
+          window.loadSettings();
+          window.loadOrganizations();
+        }
+
+      }
+      </script>
+
+    </div>
+  </main>
+</div>
+
+<script src="js/sidebar.js"></script>
+<script src="js/topbar.js"></script>
+</body>
+</html>

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOCA · Staff Portal</title>
+<link rel="icon" type="image/jpeg" href="images/svc-logo.jpg">
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<div class="app">
+  <div id="sidebar-placeholder"></div>
+  
+  <div class="main-wrapper">
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 style="margin: 0; font-size: 24px; color: #111827;">SAO Staff Dashboard</h1>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <div class="content">
+        
+        <div class="two-col" style="align-items: start;">
+          
+          <!-- LEFT: REVIEW APPLICATIONS -->
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <h3>Needs Staff Review</h3>
+                <p>Applications waiting to be forwarded to Admin.</p>
+              </div>
+            </div>
+            <table style="width: 100%; border-collapse: collapse; font-size: 13.5px;">
+              <thead>
+                <tr style="border-bottom: 2px solid var(--border); text-align: left;">
+                  <th style="padding: 12px;">Activity / Org</th>
+                  <th style="padding: 12px;">Requirements</th>
+                </tr>
+              </thead>
+              <tbody id="staff-review-table">
+                <tr><td colspan="2" style="text-align:center; padding: 20px;">Loading...</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- RIGHT: POST-ACTIVITY REPORTS -->
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <h3>Post-Activity Documentation</h3>
+                <p>Upload event pictures and completion reports.</p>
+              </div>
+            </div>
+            <div class="card-body" style="display:flex; flex-direction:column; gap:16px;">
+              <div class="field">
+                <label>Select Completed Activity</label>
+                <!-- Dropdown populated by database -->
+                <select id="completed-activities" style="width:100%; padding:10px; border:1px solid #d1d5db; border-radius:6px;">
+                  <option>Loading...</option>
+                </select>
+              </div>
+              
+              <div class="field">
+                <label>Upload Pictures (Max 3)</label>
+                <div style="border: 2px dashed #d1d5db; border-radius: 8px; padding: 20px; text-align: center; cursor: pointer;" onclick="document.getElementById('report-upload').click()">
+                  <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#6b7280" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                  <div style="font-size:13px; margin-top:8px;">Browse Photos (JPG, PNG)</div>
+                  <input type="file" id="report-upload" multiple accept="image/*" style="display:none;" onchange="document.getElementById('upload-status').innerText = this.files.length + ' file(s) selected'">
+                </div>
+                <div id="upload-status" style="font-size: 13px; color: var(--primary); margin-top: 8px; font-weight: 500; text-align: center;"></div>
+              </div>
+
+              <button class="btn btn-outline" style="justify-content:center;" onclick="window.submitReport(this)">Submit Documentation</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+  const supabaseUrl = 'https://xhxwsjdtpbxosqwzmfsk.supabase.co';
+  const supabaseKey = 'sb_publishable_CYvnSlv4LAbXLW0sNu_qeA_PNA6vhxU';
+  if (!window.db) window.db = supabase.createClient(supabaseUrl, supabaseKey);
+
+  let currentUserName = '';
+
+  window.checkAuth = function() {
+    const userStr = localStorage.getItem('currentUser');
+    
+    if (!userStr) {
+      window.location.href = 'index.html'; 
+      return;
+    }
+
+    const user = JSON.parse(userStr);
+    currentUserName = user.name;
+
+    window.loadPendingStaff();
+    window.loadCompletedActivities();
+  };
+
+  window.loadPendingStaff = async function() {
+    const tbody = document.getElementById('staff-review-table');
+    
+    const { data, error } = await window.db
+      .from('applications')
+      .select('*')
+      .in('status', ['Submitted', 'Pending', 'Pending Staff Review'])
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      tbody.innerHTML = `<tr><td colspan="2" style="text-align:center; padding:20px; color:red;">Failed to fetch database: ${error.message}</td></tr>`;
+      return;
+    }
+
+    if(!data || data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding:20px;">No applications require review right now.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = '';
+    data.forEach(app => {
+      let fileLink = '#';
+      let linkTarget = '_self';
+      if (app.remarks && app.remarks.includes('[File Attached]:')) {
+         fileLink = app.remarks.split('[File Attached]:')[1].trim();
+         linkTarget = '_blank';
+      }
+
+      let badgeHtml = `<span style="font-size: 11px; background: #fef08a; color: #854d0e; padding: 2px 6px; border-radius: 4px; margin-left: 6px;">${app.status}</span>`;
+
+      tbody.innerHTML += `
+        <tr style="border-bottom: 1px solid var(--border);">
+          <td style="padding: 12px;"><b>${app.title || 'Untitled'}</b> ${badgeHtml}<br><span style="color:#6b7280; font-size:12px;">${app.organization || 'No Org'}</span></td>
+          <td style="padding: 12px;">
+            <a href="${fileLink}" target="${linkTarget}" style="color:var(--primary); font-weight:500; display:flex; align-items:center; gap:4px; text-decoration:none;">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              ${fileLink !== '#' ? 'View File' : 'No File Attached'}
+            </a>
+          </td>
+        </tr>
+      `;
+    });
+  };
+
+  window.loadCompletedActivities = async function() {
+    const select = document.getElementById('completed-activities');
+    const { data, error } = await window.db.from('activities').select('id, title').eq('status', 'Completed');
+    
+    if (error) {
+      select.innerHTML = '<option disabled>Error loading activities</option>';
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      select.innerHTML = '<option disabled selected>No completed activities found.</option>';
+      return;
+    }
+
+    select.innerHTML = '<option disabled selected>-- Choose Activity --</option>';
+    data.forEach(act => {
+      select.innerHTML += `<option value="${act.id}">${act.title}</option>`;
+    });
+  };
+
+  // REAL SUPABASE UPLOAD FUNCTION
+  window.submitReport = async function(btn) {
+    const select = document.getElementById('completed-activities');
+    const files = document.getElementById('report-upload').files;
+
+    if (select.selectedIndex === 0 || !select.value) {
+      alert("Please select a completed activity from the dropdown.");
+      return;
+    }
+
+    if (files.length === 0) {
+      alert("Please attach at least one photo.");
+      return;
+    }
+    
+    // ENFORCE 3 PICTURE LIMIT
+    if (files.length > 3) {
+      alert("You can only upload a maximum of 3 photos. Please re-select your images.");
+      return;
+    }
+
+    const activityId = select.value;
+    const originalText = btn.innerText;
+    btn.innerText = "Uploading Photos...";
+    btn.disabled = true;
+
+    try {
+      let uploadedUrls = [];
+      
+      // Upload each file to storage
+      for (const file of files) {
+        const uniqueName = `${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
+        const { error: uploadError } = await window.db.storage.from('activity_photos').upload(uniqueName, file);
+        
+        if (uploadError) throw uploadError;
+        
+        const { data } = window.db.storage.from('activity_photos').getPublicUrl(uniqueName);
+        uploadedUrls.push(data.publicUrl);
+      }
+
+      // Grab existing photos so we don't accidentally delete them, but limit total to 3
+      const { data: actData, error: fetchErr } = await window.db.from('activities').select('photos').eq('id', activityId).single();
+      if (fetchErr) throw fetchErr;
+
+      let currentPhotos = actData.photos || [];
+      let combinedPhotos = currentPhotos.concat(uploadedUrls).slice(0, 3); // Keeps it strictly at 3 max
+
+      // Save URLs to the database
+      const { error: dbError } = await window.db.from('activities').update({ photos: combinedPhotos }).eq('id', activityId);
+      if (dbError) throw dbError;
+
+      alert("Documentation successfully uploaded to the database!");
+      
+      // Reset Form
+      select.selectedIndex = 0;
+      document.getElementById('report-upload').value = "";
+      document.getElementById('upload-status').innerText = "";
+
+    } catch (error) {
+      alert("Upload failed: " + error.message);
+    }
+
+    btn.innerText = originalText;
+    btn.disabled = false;
+  };
+
+  // THIS ENSURES THE DATA LOADS AUTOMATICALLY WITHOUT REFRESHING!
+  document.addEventListener('DOMContentLoaded', () => {
+    window.checkAuth();
+  });
+</script>
+<script src="js/sidebar.js"></script>
+<script src="js/topbar.js"></script>
+</body>
+</html>

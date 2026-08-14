@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOCA · Calendar</title>
+<link rel="icon" type="image/jpeg" href="images/svc-logo.jpg">
+<link rel="icon" type="image/jpeg" href="images/svc-logo.jpg">
+<link rel="stylesheet" href="css/style.css">
+<!-- MUST BE IN THE HEAD FOR THE SPA ROUTER TO WORK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<div class="app">
+
+  <!-- 1. SIDEBAR INJECTION POINT -->
+  <div id="sidebar-placeholder"></div>
+  
+  <!-- 2. MAIN CONTENT WRAPPER -->
+  <div class="main-wrapper">
+    
+    <!-- 3. TOPBAR -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 style="margin: 0; font-size: 24px; color: #111827;">Manage Activity Calendar</h1>
+        <div class="breadcrumb"><a href="dashboard.html">Dashboard</a><span class="sep">/</span><span class="current">Calendar</span></div>
+      </div>
+      <div class="topbar-actions">
+        <!-- topbar.js will automatically inject the profile and notifications here -->
+      </div>
+    </header>
+
+    <!-- 4. DASHBOARD CONTENT -->
+    <main class="main">
+
+      <!-- EVERYTHING MUST BE INSIDE .CONTENT FOR THE ROUTER -->
+      <div class="content">
+
+        <!-- MOVED CSS HERE SO THE ROUTER APPLIES IT -->
+        <style>
+          /* CSS FOR CALENDAR VIEWS */
+          .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0; text-align: left; border-top: 1px solid var(--border); border-left: 1px solid var(--border); }
+          .calendar-day-header { padding: 8px; font-size: 11px; font-weight: 800; color: var(--text-sub); text-align: center; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+          
+          .calendar-cell { min-height: 100px; padding: 8px; font-size: 12.5px; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); position: relative; }
+          .calendar-cell.week-view { min-height: 450px; border-bottom: none; }
+          .calendar-cell.empty { background: #f9fafb; }
+          .calendar-cell.today .date-num { display: inline-flex; width: 24px; height: 24px; align-items: center; justify-content: center; border-radius: 50%; background: var(--primary); color: #fff; font-weight: 800; }
+          
+          .event-pill { font-size: 10.5px; font-weight: 700; padding: 4px 6px; border-radius: 5px; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; transition: opacity 0.2s; }
+          .event-pill:hover { opacity: 0.8; }
+          
+          /* CSS FOR LIST VIEW */
+          .list-table th { background: #f9fafb; font-size: 12px; text-transform: uppercase; color: var(--text-sub); padding: 12px 16px; border-bottom: 1px solid var(--border); text-align: left; }
+          .list-table td { padding: 14px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+        </style>
+
+        <div class="pill-tabs" id="view-tabs">
+          <button class="active" data-view="month">Month</button>
+          <button data-view="week">Week</button>
+          <button data-view="list">List</button>
+        </div>
+
+        <div class="two-col">
+          <div class="stack">
+            <div class="card">
+              <div class="card-head">
+                <div style="display:flex;align-items:center;gap:14px;">
+                  <button class="icon-action" onclick="changeDateRange(-1)">‹</button>
+                  <h3 id="currentDateHeader" style="font-size:17px; min-width: 170px; text-align: center;">...</h3>
+                  <button class="icon-action" onclick="changeDateRange(1)">›</button>
+                  <button class="btn btn-outline btn-sm" onclick="resetToToday()">Today</button>
+                </div>
+                <button class="btn btn-primary" onclick="openModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg> New Activity</button>
+              </div>
+              <div class="card-body" style="padding: 0;">
+                
+                <!-- 1. MONTH VIEW CONTAINER -->
+                <div id="view-month" style="display: block;">
+                  <div class="calendar-grid" id="monthGrid"></div>
+                </div>
+
+                <!-- 2. WEEK VIEW CONTAINER -->
+                <div id="view-week" style="display: none;">
+                  <div class="calendar-grid" id="weekGrid" style="border-bottom: 1px solid var(--border);"></div>
+                </div>
+
+                <!-- 3. LIST VIEW CONTAINER -->
+                <div id="view-list" style="display: none;">
+                  <table class="list-table" style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                      <tr>
+                        <th>Date & Time</th>
+                        <th>Activity Title</th>
+                        <th>Type</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody id="listBody">
+                       <!-- List items inject here -->
+                    </tbody>
+                  </table>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          <div class="stack">
+            <div class="card">
+              <div class="card-head"><h3>Upcoming Activities</h3></div>
+              <div class="card-body" id="upcomingList" style="display:flex;flex-direction:column;gap:14px;">
+                <p style="color:#6b7280; font-size: 13px; text-align: center;">Loading upcoming activities...</p>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-head"><h3>Legend</h3></div>
+              <div class="card-body" style="display:flex;flex-direction:column;gap:10px;font-size:12.5px;">
+                <div style="display:flex;align-items:center;gap:8px;"><div style="width:8px;height:8px;border-radius:50%;background:#2563eb;"></div>Seminar / Training</div>
+                <div style="display:flex;align-items:center;gap:8px;"><div style="width:8px;height:8px;border-radius:50%;background:#7c3aed;"></div>Community Service</div>
+                <div style="display:flex;align-items:center;gap:8px;"><div style="width:8px;height:8px;border-radius:50%;background:#16a34a;"></div>Advocacy / Educational</div>
+                <div style="display:flex;align-items:center;gap:8px;"><div style="width:8px;height:8px;border-radius:50%;background:#c2790a;"></div>Meeting / Other</div>
+                <div style="display:flex;align-items:center;gap:8px;"><div style="width:8px;height:8px;border-radius:50%;background:#dc2626;"></div>Sports / Competition</div>
+              </div>
+            </div>
+
+            <div class="note-banner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-5M12 8h.01"/></svg> Events synced from the Activities dashboard cannot be manually deleted here.</div>
+          </div>
+        </div>
+
+        <!-- STYLED MODAL FORM -->
+        <div id="eventModal" class="modal-overlay" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(17, 24, 39, 0.7); display: none; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(2px);">
+          <div class="modal-content" style="background: white; padding: 24px; border-radius: 8px; width: 100%; max-width: 450px;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+              <h3 style="margin: 0; font-size: 18px;">Add New Activity</h3>
+              <button type="button" class="btn-close" onclick="window.closeAnyModal('eventModal', 'eventForm')" style="background: none; border: none; cursor: pointer;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+            <form id="eventForm">
+              <div class="modal-body" style="padding: 0;">
+                <div class="stack" style="gap: 16px;">
+                  <div class="field full" style="margin-bottom: 12px;">
+                    <label style="display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px;">Activity Title</label>
+                    <input type="text" id="evTitle" required placeholder="e.g. Intramurals 2025" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box;">
+                  </div>
+                  
+                  <div class="field full" style="margin-bottom: 12px;">
+                    <label style="display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px;">Type of Activity</label>
+                    <select id="evType" required style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box;">
+                      <option value="Seminar / Training">Seminar / Training</option>
+                      <option value="Community Service">Community Service</option>
+                      <option value="Advocacy / Educational">Advocacy / Educational</option>
+                      <option value="Sports / Competition">Sports / Competition</option>
+                      <option value="Meeting / Other">Meeting / Other</option>
+                    </select>
+                  </div>
+                  
+                  <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                    <div class="field">
+                      <label style="display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px;">Date</label>
+                      <input type="date" id="evDate" required style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box;">
+                    </div>
+                    <div class="field">
+                      <label style="display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px;">Start Time</label>
+                      <input type="time" id="evStart" required style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box;">
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 12px;">
+                <button type="button" class="btn btn-outline" onclick="window.closeAnyModal('eventModal', 'eventForm')" style="padding: 8px 16px;">Cancel</button>
+                <button type="submit" class="btn btn-primary" id="saveEventBtn" style="padding: 8px 16px;">Save to Calendar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- SCRIPT LOGIC -->
+        <script>
+          {
+            const supabaseUrl = 'https://xhxwsjdtpbxosqwzmfsk.supabase.co';
+            const supabaseKey = 'sb_publishable_CYvnSlv4LAbXLW0sNu_qeA_PNA6vhxU';
+            
+            if (!window.db) {
+                window.db = supabase.createClient(supabaseUrl, supabaseKey);
+            }
+            
+            window.globalEvents = [];
+            window.currentDate = new Date(); 
+            window.currentView = 'month'; 
+            
+            // Map types from the other tables into our color legend
+            const eventColors = {
+              'Seminar / Training': { bg: '#2563eb22', text: '#2563eb', dot: '#2563eb' },
+              'Seminar': { bg: '#2563eb22', text: '#2563eb', dot: '#2563eb' },
+              'Workshop': { bg: '#2563eb22', text: '#2563eb', dot: '#2563eb' },
+              'Community Service': { bg: '#7c3aed22', text: '#7c3aed', dot: '#7c3aed' },
+              'Outreach': { bg: '#7c3aed22', text: '#7c3aed', dot: '#7c3aed' },
+              'Advocacy / Educational': { bg: '#16a34a22', text: '#16a34a', dot: '#16a34a' },
+              'Meeting / Other': { bg: '#c2790a22', text: '#c2790a', dot: '#c2790a' },
+              'Event': { bg: '#c2790a22', text: '#c2790a', dot: '#c2790a' },
+              'Sports / Competition': { bg: '#dc262622', text: '#dc2626', dot: '#dc2626' },
+              'Competition': { bg: '#dc262622', text: '#dc2626', dot: '#dc2626' }
+            };
+
+            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            const daysOfWeek = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+
+            function getEventColor(type) { return eventColors[type] || eventColors['Meeting / Other']; }
+
+            function formatTime(timeStr) {
+              if(!timeStr) return '';
+              const [h, m] = timeStr.split(':');
+              let hours = parseInt(h, 10);
+              const ampm = hours >= 12 ? 'PM' : 'AM';
+              hours = hours % 12 || 12;
+              return `${hours}:${m} ${ampm}`;
+            }
+
+            // Centralized Dynamic Status Calculator
+            window.calculateDynamicStatus = function(startDate, startTime, endDate, endTime, dbStatus) {
+              if (dbStatus === 'Cancelled Activity' || dbStatus === 'Cancelled') return 'Cancelled';
+              if (!startDate) return 'Ongoing';
+
+              const now = new Date();
+              const startString = `${startDate}T${startTime || '00:00'}:00`;
+              const endString = `${endDate || startDate}T${endTime || '23:59'}:59`;
+              
+              const start = new Date(startString);
+              const end = new Date(endString);
+
+              if (now < start) return 'Upcoming';
+              if (now >= start && now <= end) return 'Ongoing';
+              if (now > end) return 'Completed';
+
+              return 'Ongoing';
+            };
+
+            window.setupTabs = function() {
+              const tabs = document.querySelectorAll('#view-tabs button');
+              tabs.forEach(tab => {
+                tab.addEventListener('click', (e) => {
+                  tabs.forEach(t => t.classList.remove('active'));
+                  e.target.classList.add('active');
+                  
+                  window.currentView = e.target.getAttribute('data-view');
+                  
+                  document.getElementById('view-month').style.display = window.currentView === 'month' ? 'block' : 'none';
+                  document.getElementById('view-week').style.display = window.currentView === 'week' ? 'block' : 'none';
+                  document.getElementById('view-list').style.display = window.currentView === 'list' ? 'block' : 'none';
+                  
+                  window.renderCalendar(); 
+                });
+              });
+            };
+
+            window.changeDateRange = function(delta) {
+              if (window.currentView === 'week') {
+                window.currentDate.setDate(window.currentDate.getDate() + (delta * 7));
+              } else {
+                window.currentDate.setMonth(window.currentDate.getMonth() + delta);
+              }
+              window.renderCalendar();
+            };
+
+            window.resetToToday = function() {
+              window.currentDate = new Date();
+              window.renderCalendar();
+            };
+
+            window.renderCalendar = function() {
+              if (window.currentView === 'month') window.renderMonth();
+              else if (window.currentView === 'week') window.renderWeek();
+              else if (window.currentView === 'list') window.renderList();
+              
+              window.populateSidebar();
+            };
+
+            window.renderMonth = function() {
+              const grid = document.getElementById('monthGrid');
+              grid.innerHTML = ''; 
+
+              daysOfWeek.forEach(day => { grid.innerHTML += `<div class="calendar-day-header">${day}</div>`; });
+
+              const year = window.currentDate.getFullYear();
+              const month = window.currentDate.getMonth();
+              document.getElementById('currentDateHeader').innerText = `${monthNames[month]} ${year}`;
+
+              const firstDay = new Date(year, month, 1).getDay(); 
+              const daysInMonth = new Date(year, month + 1, 0).getDate(); 
+              const daysInPrevMonth = new Date(year, month, 0).getDate(); 
+              const realToday = new Date();
+              const isCurrentMonth = realToday.getMonth() === month && realToday.getFullYear() === year;
+
+              for (let i = 0; i < firstDay; i++) {
+                const prevDate = daysInPrevMonth - firstDay + i + 1;
+                grid.innerHTML += `<div class="calendar-cell empty"><span style="color:var(--text-faint);">${prevDate}</span></div>`;
+              }
+
+              for (let day = 1; day <= daysInMonth; day++) {
+                const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const dayEvents = window.globalEvents.filter(ev => ev.event_date === dateString);
+
+                let eventsHTML = '';
+                dayEvents.forEach(ev => {
+                  const displayTitle = ev.event_title || ev.title || 'Untitled Activity';
+                  const c = getEventColor(ev.type);
+                  // Render the synced tag if necessary
+                  const indicator = ev.source !== 'calendar' ? '🔄 ' : '';
+                  eventsHTML += `<div class="event-pill" style="background:${c.bg}; color:${c.text};" title="${displayTitle}" onclick="window.deleteEvent(${ev.id}, '${displayTitle.replace(/'/g, "\\'")}', '${ev.source}')">● ${indicator}${displayTitle}</div>`;
+                });
+
+                const isToday = isCurrentMonth && realToday.getDate() === day;
+                grid.innerHTML += `<div class="calendar-cell ${isToday ? 'today' : ''}"><span class="date-num">${day}</span>${eventsHTML}</div>`;
+              }
+            };
+
+            window.renderWeek = function() {
+              const grid = document.getElementById('weekGrid');
+              grid.innerHTML = '';
+
+              let startOfWeek = new Date(window.currentDate);
+              startOfWeek.setDate(window.currentDate.getDate() - window.currentDate.getDay());
+              
+              let endOfWeek = new Date(startOfWeek);
+              endOfWeek.setDate(startOfWeek.getDate() + 6);
+
+              const startStr = startOfWeek.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+              const endStr = endOfWeek.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+              document.getElementById('currentDateHeader').innerText = `${startStr} — ${endStr}`;
+
+              const realToday = new Date();
+
+              for (let i = 0; i < 7; i++) {
+                let cellDate = new Date(startOfWeek);
+                cellDate.setDate(startOfWeek.getDate() + i);
+                
+                const isToday = cellDate.toDateString() === realToday.toDateString();
+                grid.innerHTML += `<div class="calendar-day-header ${isToday ? 'today' : ''}" style="${isToday ? 'color:var(--primary);' : ''}">${daysOfWeek[i]} ${cellDate.getDate()}</div>`;
+              }
+
+              for (let i = 0; i < 7; i++) {
+                let cellDate = new Date(startOfWeek);
+                cellDate.setDate(startOfWeek.getDate() + i);
+                
+                const isToday = cellDate.toDateString() === realToday.toDateString();
+                const dateString = `${cellDate.getFullYear()}-${String(cellDate.getMonth() + 1).padStart(2, '0')}-${String(cellDate.getDate()).padStart(2, '0')}`;
+                
+                const dayEvents = window.globalEvents.filter(ev => ev.event_date === dateString).sort((a, b) => (a.start_time || '') > (b.start_time || '') ? 1 : -1);
+                
+                let eventsHTML = '';
+                dayEvents.forEach(ev => {
+                  const displayTitle = ev.event_title || ev.title || 'Untitled Activity';
+                  const c = getEventColor(ev.type);
+                  const timeStr = formatTime(ev.start_time) || 'All Day';
+                  const indicator = ev.source !== 'calendar' ? '🔄 ' : '';
+
+                  eventsHTML += `
+                    <div class="event-pill" style="background:${c.bg}; color:${c.text}; padding: 6px 8px; margin-bottom: 6px; white-space: normal;" title="${displayTitle}" onclick="window.deleteEvent(${ev.id}, '${displayTitle.replace(/'/g, "\\'")}', '${ev.source}')">
+                      <b>${timeStr}</b><br>${indicator}${displayTitle}
+                    </div>`;
+                });
+
+                grid.innerHTML += `<div class="calendar-cell week-view ${isToday ? 'today' : ''}">${eventsHTML}</div>`;
+              }
+            };
+
+            window.renderList = function() {
+              const tbody = document.getElementById('listBody');
+              tbody.innerHTML = '';
+
+              const year = window.currentDate.getFullYear();
+              const month = window.currentDate.getMonth();
+              document.getElementById('currentDateHeader').innerText = `${monthNames[month]} ${year}`;
+
+              const monthEvents = window.globalEvents.filter(ev => {
+                const d = new Date(ev.event_date);
+                return d.getFullYear() === year && d.getMonth() === month;
+              }).sort((a, b) => new Date(a.event_date) - new Date(b.event_date));
+
+              if (monthEvents.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:30px; color:#6b7280;">No events scheduled for ${monthNames[month]}.</td></tr>`;
+                return;
+              }
+
+              monthEvents.forEach(ev => {
+                const displayTitle = ev.event_title || ev.title || 'Untitled Activity';
+                const c = getEventColor(ev.type);
+                const d = new Date(ev.event_date);
+                const niceDate = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                const timeStr = formatTime(ev.start_time) || 'All Day';
+
+                // Display a "Synced" badge instead of a delete button for automated events
+                const actionHTML = ev.source === 'calendar' 
+                  ? `<a class="icon-action" style="color:var(--danger-text); cursor:pointer;" title="Delete" onclick="window.deleteEvent(${ev.id}, '${displayTitle.replace(/'/g, "\\'")}', '${ev.source}')"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></a>`
+                  : `<span style="font-size:10px; color:var(--primary); background:#e0f2fe; padding:4px 8px; border-radius:6px; font-weight:bold;">SYNCED</span>`;
+
+                tbody.innerHTML += `
+                  <tr>
+                    <td><div class="cell-title">${niceDate}</div><div class="cell-sub">${timeStr}</div></td>
+                    <td><div class="cell-title">${displayTitle}</div></td>
+                    <td><span class="badge" style="background:${c.bg}; color:${c.text}; border:none;">${ev.type || 'Other'}</span></td>
+                    <td>${actionHTML}</td>
+                  </tr>
+                `;
+              });
+            };
+
+            window.populateSidebar = function() {
+              const list = document.getElementById('upcomingList');
+              list.innerHTML = '';
+              
+              const realToday = new Date();
+              const todayString = `${realToday.getFullYear()}-${String(realToday.getMonth() + 1).padStart(2, '0')}-${String(realToday.getDate()).padStart(2, '0')}`;
+
+              const upcoming = window.globalEvents
+                .filter(ev => ev.event_date >= todayString)
+                .sort((a, b) => new Date(a.event_date) - new Date(b.event_date))
+                .slice(0, 5); 
+
+              if (upcoming.length === 0) {
+                list.innerHTML = `<p style="color:#6b7280; font-size: 13px; text-align: center;">No upcoming activities scheduled.</p>`;
+                return;
+              }
+
+              upcoming.forEach(ev => {
+                const displayTitle = ev.event_title || ev.title || 'Untitled Activity';
+                const c = getEventColor(ev.type);
+                const d = new Date(ev.event_date);
+                const niceDate = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                
+                list.innerHTML += `
+                  <div style="display:flex;gap:12px;">
+                    <div style="width:8px;height:8px;border-radius:50%;background:${c.dot};margin-top:5px;flex-shrink:0;"></div>
+                    <div>
+                      <div class="cell-title" style="font-size:13px;">${displayTitle}</div>
+                      <div class="cell-sub">${niceDate} · ${formatTime(ev.start_time) || 'All Day'}</div>
+                    </div>
+                  </div>
+                `;
+              });
+            };
+
+            // MODIFIED LOAD LOGIC: Now pulls from 3 tables!
+            window.loadEvents = async function() {
+              const { data: calEvents } = await window.db.from('calendar_events').select('*');
+              const { data: apps } = await window.db.from('applications').select('*').in('status', ['Approved']);
+              const { data: acts } = await window.db.from('activities').select('*');
+
+              let combined = [];
+
+              // 1. Standalone Calendar Events
+              if (calEvents) {
+                calEvents.forEach(ev => {
+                  combined.push({
+                    id: ev.id,
+                    source: 'calendar',
+                    event_title: ev.event_title || ev.title || 'Untitled Activity',
+                    type: ev.type || 'Meeting / Other',
+                    event_date: ev.event_date,
+                    start_time: ev.start_time,
+                    status: 'Upcoming' // Default for calendar events
+                  });
+                });
+              }
+
+              // 2. Synced Approved Applications (Filtered by Dynamic Status)
+              if (apps) {
+                apps.forEach(app => {
+                  let dynStatus = window.calculateDynamicStatus(app.start_date, app.start_time, app.end_date, app.end_time, app.status);
+                  if (dynStatus === 'Upcoming' || dynStatus === 'Ongoing') {
+                    combined.push({
+                      id: app.id,
+                      source: 'application',
+                      event_title: app.title || 'Untitled Activity',
+                      type: app.type || 'Event',
+                      event_date: app.start_date,
+                      start_time: app.start_time,
+                      status: dynStatus
+                    });
+                  }
+                });
+              }
+
+              // 3. Synced Manual Activities (Filtered by Status)
+              if (acts) {
+                acts.forEach(act => {
+                  if (act.status === 'Upcoming' || act.status === 'Ongoing') {
+                    combined.push({
+                      id: act.id,
+                      source: 'activity',
+                      event_title: act.title || 'Untitled Activity',
+                      type: act.type || 'Event',
+                      event_date: act.activity_date,
+                      start_time: null, 
+                      status: act.status
+                    });
+                  }
+                });
+              }
+
+              window.globalEvents = combined;
+              window.renderCalendar();
+            };
+
+            window.deleteEvent = async function(id, title, source) {
+              if (source !== 'calendar') {
+                alert("This event was synced automatically. Please go to the Activities dashboard to modify or cancel it.");
+                return;
+              }
+              if(!confirm(`Do you want to permanently delete "${title}" from the calendar?`)) return;
+              
+              const { error } = await window.db.from('calendar_events').delete().eq('id', id);
+              if(error) alert("Error: " + error.message);
+              else await window.loadEvents();
+            };
+
+            window.openModal = function() { document.getElementById('eventModal').style.display = 'flex'; };
+            window.closeAnyModal = function(modalId, formId) { 
+              document.getElementById(modalId).style.display = 'none'; 
+              document.getElementById(formId).reset(); 
+            };
+
+            document.getElementById('eventForm').onsubmit = async function(e) {
+              e.preventDefault();
+              const btn = document.getElementById('saveEventBtn');
+              btn.disabled = true; btn.innerText = "Saving...";
+
+              const eventData = {
+                event_title: document.getElementById('evTitle').value, 
+                type: document.getElementById('evType').value,
+                event_date: document.getElementById('evDate').value,
+                start_time: document.getElementById('evStart').value
+              };
+
+              const { error } = await window.db.from('calendar_events').insert([eventData]);
+              if (error) {
+                  alert("Error adding event: " + error.message);
+              } else { 
+                  window.closeAnyModal('eventModal', 'eventForm'); 
+                  await window.loadEvents(); 
+              }
+              
+              btn.disabled = false; btn.innerText = "Save to Calendar";
+            };
+            
+            // Initialize everything immediately
+            window.setupTabs();
+            window.loadEvents();
+          }
+        </script>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="js/sidebar.js"></script>
+<script src="js/topbar.js"></script>
+</body>
+</html>

@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOCA · Application Details</title>
+<link rel="icon" type="image/jpeg" href="images/svc-logo.jpg">
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  /* --- NEW UI DESIGN MATCHING THE IMAGE --- */
+  .main-content {
+    background-color: #f8fafc;
+    padding: 30px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  .btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: white;
+    border: 1px solid #d1d5db;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #374151;
+    text-decoration: none;
+    cursor: pointer;
+    margin-bottom: 20px;
+  }
+  .btn-back:hover { background: #f3f4f6; }
+
+  /* TOP PANEL: Header & Process Status */
+  .top-panel {
+    display: flex;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+  }
+  
+  .top-panel-left {
+    flex: 2;
+    padding: 30px;
+  }
+  
+  .top-panel-right {
+    flex: 1;
+    padding: 30px;
+    border-left: 1px solid #e5e7eb;
+  }
+
+  .app-header {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+  }
+
+  .app-icon {
+    width: 64px;
+    height: 64px;
+    background: #dcfce7;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #16a34a;
+    flex-shrink: 0;
+  }
+
+  .app-title-row { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+  .app-title-row h2 { margin: 0; font-size: 22px; font-weight: 700; color: #111827; }
+  
+  .app-subtitle { color: #6b7280; font-size: 14px; margin-bottom: 16px; }
+
+  .app-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    font-size: 13.5px;
+    color: #4b5563;
+  }
+  .meta-item { display: flex; align-items: center; gap: 8px; }
+
+  /* PROCESS STATUS TIMELINE */
+  .process-title { font-size: 16px; font-weight: 600; margin-bottom: 20px; margin-top:0; color: #111827; }
+  
+  .timeline-item { display: flex; gap: 16px; position: relative; padding-bottom: 24px; }
+  .timeline-item:last-child { padding-bottom: 0; }
+  
+  .timeline-line {
+    position: absolute;
+    left: 15px;
+    top: 32px;
+    bottom: 0;
+    width: 2px;
+    background: #e5e7eb;
+  }
+  
+  .timeline-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    z-index: 1;
+  }
+  .icon-done { background: #f3f4f6; color: #6b7280; }
+  .icon-current { background: #fef9c3; color: #ca8a04; border: 2px solid #fde047; }
+  .icon-success { background: #dcfce7; color: #16a34a; }
+  .icon-danger { background: #fee2e2; color: #dc2626; }
+  
+  .timeline-text { padding-top: 5px; }
+  .timeline-text h4 { margin: 0; font-size: 14px; font-weight: 600; color: #111827; }
+  .timeline-text p { margin: 4px 0 0 0; font-size: 12px; color: #6b7280; }
+
+  /* TABS */
+  .tabs-container {
+    display: flex;
+    gap: 32px;
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 24px;
+    padding-left: 8px;
+  }
+  .tab {
+    padding: 12px 4px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #6b7280;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  .tab:hover { color: #111827; }
+  .tab.active { color: #1d4ed8; border-bottom: 2px solid #1d4ed8; font-weight: 600; }
+
+  /* BOTTOM TWO-COL LAYOUT */
+  .bottom-grid {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+  }
+  
+  .card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+  }
+
+  .left-col { flex: 2; display: flex; flex-direction: column; gap: 24px; }
+  .right-col { flex: 1; display: flex; flex-direction: column; gap: 24px; }
+
+  /* OVERVIEW KEY-VALUE GRID */
+  .detail-row {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 16px;
+    padding: 16px 0;
+    border-bottom: 1px solid #f3f4f6;
+    font-size: 14px;
+  }
+  .detail-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .detail-row:first-child { padding-top: 0; }
+  .detail-label { font-weight: 600; color: #111827; }
+  .detail-value { color: #4b5563; line-height: 1.5; }
+
+  /* ACTIVITY INFO BLOCKS (Right Side) */
+  .info-title { font-size: 16px; font-weight: 600; margin-bottom: 20px; margin-top:0; color: #111827; }
+  .info-block { display: flex; gap: 16px; margin-bottom: 20px; align-items: flex-start; }
+  .info-block:last-child { margin-bottom: 0; }
+  
+  .info-icon {
+    width: 36px;
+    height: 36px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .info-text label { display: block; font-size: 12px; font-weight: 600; color: #111827; margin-bottom: 4px; }
+  .info-text span { display: block; font-size: 13px; color: #4b5563; }
+
+  /* ADMIN ACTIONS CARD */
+  .action-buttons { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
+  .btn-block { width: 100%; justify-content: center; padding: 10px; font-weight: 600; border-radius: 6px; cursor: pointer; }
+
+  .badge-yellow { background: #fef08a; color: #854d0e; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+  .badge-green { background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+  .badge-red { background: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <div id="sidebar-placeholder"></div>
+
+  <div class="main-wrapper">
+    <!-- TOPBAR -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 style="margin: 0; font-size: 20px; color: #111827;">Application Details</h1>
+        <div class="breadcrumb">
+          <a href="#">Dashboard</a><span class="sep">/</span><a href="applications.html">Applications</a><span class="sep">/</span><span class="current">Application Details</span>
+        </div>
+      </div>
+      <div class="topbar-actions"></div>
+    </header>
+
+    <main class="main-content">
+      
+      <a class="btn-back" href="applications.html">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+        Back
+      </a>
+
+      <div id="loadingMessage" style="text-align: center; padding: 40px; color: #6b7280;">Loading application...</div>
+
+      <div id="applicationContent" style="display: none;">
+        
+        <!-- TOP PANEL (Header & Timeline) -->
+        <div class="top-panel">
+          <div class="top-panel-left">
+            <div class="app-header">
+              <div class="app-icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+              </div>
+              <div>
+                <div class="app-title-row">
+                  <h2 id="app-title">...</h2>
+                  <span id="app-badge" class="badge-yellow">...</span>
+                </div>
+                <div class="app-subtitle" id="app-type">...</div>
+                <div class="app-meta-row">
+                  <div class="meta-item">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    <span id="app-date-range">...</span>
+                  </div>
+                  <div class="meta-item">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                    <span id="app-venue">...</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="top-panel-right">
+            <h3 class="process-title">Process Status</h3>
+            
+            <div class="timeline-item">
+              <div class="timeline-line"></div>
+              <div class="timeline-icon icon-success"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+              <div class="timeline-text">
+                <h4>Submitted</h4>
+                <p id="flow-submitted">...</p>
+              </div>
+            </div>
+
+            <div class="timeline-item">
+              <div class="timeline-line" id="line-review"></div>
+              <div class="timeline-icon" id="icon-review"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div>
+              <div class="timeline-text">
+                <h4>Under Review</h4>
+                <p id="flow-reviewed">Current Step</p>
+              </div>
+            </div>
+
+            <div class="timeline-item">
+              <div class="timeline-icon" id="icon-final"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg></div>
+              <div class="timeline-text">
+                <h4 id="flow-final-title">Final Decision</h4>
+                <p id="flow-final-desc">Pending</p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- TABS -->
+        <div class="tabs-container">
+          <div class="tab active" id="tab-overview" onclick="switchTab('overview')">Overview</div>
+          <div class="tab" id="tab-docs" onclick="switchTab('docs')">Documents (0)</div>
+        </div>
+
+        <!-- BOTTOM GRID -->
+        <div class="bottom-grid">
+          
+          <!-- LEFT COLUMN -->
+          <div class="left-col">
+            
+            <!-- OVERVIEW CONTENT -->
+            <div class="card" id="content-overview">
+              <div class="detail-row">
+                <div class="detail-label">Purpose / Description</div>
+                <div class="detail-value" id="detail-purpose">...</div>
+              </div>
+              <div class="detail-row">
+                <div class="detail-label">Requested by</div>
+                <div class="detail-value" id="detail-requester">...</div>
+              </div>
+              <div class="detail-row">
+                <div class="detail-label">Organization / Group</div>
+                <div class="detail-value" id="detail-org">...</div>
+              </div>
+              <div class="detail-row">
+                <div class="detail-label">Number of Participants</div>
+                <div class="detail-value" id="detail-participants-left">...</div>
+              </div>
+              <div class="detail-row">
+                <div class="detail-label">Email</div>
+                <div class="detail-value" id="detail-email">...</div>
+              </div>
+            </div>
+
+            <!-- DOCUMENTS CONTENT (Hidden by default) -->
+            <div class="card" id="content-docs" style="display:none; text-align:center; padding: 40px 20px;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5" style="width: 48px; height: 48px; margin-bottom: 12px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+              <div style="font-weight:600; color:#374151; font-size:14px;">No Documents Attached</div>
+            </div>
+
+          </div>
+
+          <!-- RIGHT COLUMN -->
+          <div class="right-col">
+            
+            <!-- ACTIVITY INFO CARD -->
+            <div class="card">
+              <h3 class="info-title">Activity Information</h3>
+              
+              <div class="info-block">
+                <div class="info-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg></div>
+                <div class="info-text">
+                  <label>Type of Activity</label>
+                  <span id="info-type">...</span>
+                </div>
+              </div>
+
+              <div class="info-block">
+                <div class="info-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></div>
+                <div class="info-text">
+                  <label>Start Date</label>
+                  <span id="info-start">...</span>
+                </div>
+              </div>
+
+              <div class="info-block">
+                <div class="info-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg></div>
+                <div class="info-text">
+                  <label>End Date</label>
+                  <span id="info-end">...</span>
+                </div>
+              </div>
+
+              <div class="info-block">
+                <div class="info-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg></div>
+                <div class="info-text">
+                  <label>Venue / Location</label>
+                  <span id="info-venue">...</span>
+                </div>
+              </div>
+
+              <div class="info-block">
+                <div class="info-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></div>
+                <div class="info-text">
+                  <label>Number of Participants</label>
+                  <span id="info-participants">...</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- ADMIN DECISION CARD -->
+            <div class="card" id="decision-card">
+              <h3 class="info-title">Review Actions</h3>
+              <label style="font-size:12.5px;font-weight:600; color:#111827;">Remarks / Feedback</label>
+              <textarea id="decision-remarks" placeholder="Enter feedback here..." style="width:100%;margin-top:8px;border:1px solid #d1d5db;border-radius:8px;padding:10px;font-family:inherit;font-size:13px;min-height:90px;outline:none;resize:vertical;"></textarea>
+              
+              <div class="action-buttons">
+                <!-- APPROVE / FORWARD -->
+                <button id="btn-approve" class="btn btn-primary btn-block" onclick="window.updateApplicationStatus('Approved')">Approve Application</button>
+                
+                <!-- DISAPPROVE -->
+                <button id="btn-disapprove" class="btn btn-danger-outline btn-block" style="border: 1px solid #ef4444; color: #ef4444; background: white;" onclick="window.updateApplicationStatus('Disapproved')">Disapprove Application</button>
+                
+                <!-- CLARIFICATION -->
+                <button id="btn-clarify" class="btn btn-outline btn-block" style="border: 1px solid #d1d5db; color: #374151; background: white;" onclick="window.updateApplicationStatus('Needs Clarification')">Request Clarification</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+{
+  const supabaseUrl = 'https://xhxwsjdtpbxosqwzmfsk.supabase.co';
+  const supabaseKey = 'sb_publishable_CYvnSlv4LAbXLW0sNu_qeA_PNA6vhxU';
+  
+  if (!window.db) { window.db = supabase.createClient(supabaseUrl, supabaseKey); }
+
+  // Role Checking Logic
+  const userStr = localStorage.getItem('currentUser');
+  let currentUserRole = '';
+  if (userStr) { currentUserRole = JSON.parse(userStr).role || ''; }
+
+  window.urlParams = new URLSearchParams(window.location.search);
+  window.applicationId = window.urlParams.get('id');
+
+  // Helper: Format Date & Time cleanly
+  function formatDateTime(dateStr, timeStr) {
+    if (!dateStr || !timeStr) return null;
+    const cleanTime = timeStr.substring(0, 5); // Ensure no "Invalid Date" errors
+    const dateObj = new Date(`${dateStr}T${cleanTime}`);
+    const dateFmt = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const timeFmt = dateObj.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    return `${dateFmt} ${timeFmt}`;
+  }
+
+  window.switchTab = function(tabName) {
+    const tabOverview = document.getElementById('tab-overview');
+    const tabDocs = document.getElementById('tab-docs');
+    const contentOverview = document.getElementById('content-overview');
+    const contentDocs = document.getElementById('content-docs');
+
+    if (tabName === 'docs') {
+      tabDocs.classList.add('active');
+      tabOverview.classList.remove('active');
+      contentOverview.style.display = 'none';
+      contentDocs.style.display = 'block';
+    } else {
+      tabOverview.classList.add('active');
+      tabDocs.classList.remove('active');
+      contentDocs.style.display = 'none';
+      contentOverview.style.display = 'block';
+    }
+  };
+
+  window.loadApplicationDetails = async function() {
+    if (!window.applicationId) {
+      alert("No application selected! Redirecting...");
+      window.location.href = "applications.html";
+      return;
+    }
+
+    // 1. FETCH APP
+    const { data: app, error } = await window.db.from('applications').select('*').eq('id', window.applicationId).single();
+    if (error || !app) {
+      document.getElementById('loadingMessage').innerHTML = `<span style="color:red;">Error loading application details.</span>`;
+      return;
+    }
+
+    let currentStatus = app.status || 'Pending';
+    if (currentStatus.toLowerCase() === 'pending') {
+      currentStatus = 'Under Review';
+      window.db.from('applications').update({ status: currentStatus }).eq('id', window.applicationId).then(()=>{});
+    }
+    const s = currentStatus.toLowerCase();
+
+    // 2. SETUP BUTTONS BASED ON ROLE
+    if (currentUserRole === 'SAO Staff') {
+       const btnApprove = document.getElementById('btn-approve');
+       btnApprove.innerText = "Forward to Admin";
+       btnApprove.onclick = function() { window.updateApplicationStatus('Pending Admin Approval'); };
+       document.getElementById('btn-disapprove').style.display = 'none';
+    }
+
+    // 3. POPULATE UI TEXT
+    document.getElementById('app-title').innerText = app.title || 'Untitled Application';
+    document.getElementById('app-type').innerText = app.type || 'General Activity';
+    
+    // Status Badge
+    const badge = document.getElementById('app-badge');
+    badge.innerText = currentStatus;
+    if (s === 'approved') badge.className = 'badge-green';
+    else if (s === 'disapproved' || s === 'needs clarification') badge.className = 'badge-red';
+    else badge.className = 'badge-yellow';
+
+    // Dates
+    const startStr = formatDateTime(app.start_date, app.start_time);
+    const endStr = formatDateTime(app.end_date, app.end_time);
+    document.getElementById('app-date-range').innerText = (startStr && endStr) ? `${startStr} - ${endStr}` : 'Date/Time TBA';
+    document.getElementById('info-start').innerText = startStr || 'TBA';
+    document.getElementById('info-end').innerText = endStr || 'TBA';
+
+    // Others
+    document.getElementById('app-venue').innerText = app.venue || 'TBA';
+    document.getElementById('info-venue').innerText = app.venue || 'TBA';
+    document.getElementById('info-type').innerText = app.type || 'N/A';
+    document.getElementById('info-participants').innerText = app.participants || 'N/A';
+    document.getElementById('detail-participants-left').innerText = app.participants || 'N/A';
+    
+    document.getElementById('detail-purpose').innerText = app.purpose || 'No description provided.';
+    document.getElementById('detail-requester').innerText = app.applicant_name || 'N/A';
+    document.getElementById('detail-org').innerText = app.organization || 'N/A';
+    
+    // Extract email from remarks if it was saved there (legacy), otherwise fallback
+    let userEmail = 'student@svciedu.ph'; 
+    if(app.remarks && app.remarks.includes('Email updates:')) {
+       userEmail = app.remarks.split('\n')[0].replace('Email updates:', '').trim();
+    }
+    document.getElementById('detail-email').innerText = userEmail;
+
+    // 4. TIMELINE LOGIC
+    document.getElementById('flow-submitted').innerText = new Date(app.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    
+    const iconReview = document.getElementById('icon-review');
+    const lineReview = document.getElementById('line-review');
+    const iconFinal = document.getElementById('icon-final');
+    const titleFinal = document.getElementById('flow-final-title');
+    const descFinal = document.getElementById('flow-final-desc');
+
+    if (s === 'approved' || s === 'disapproved') {
+      // Review is done
+      iconReview.className = 'timeline-icon icon-success';
+      iconReview.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+      document.getElementById('flow-reviewed').innerText = "Review Completed";
+      
+      // Final is done
+      titleFinal.innerText = currentStatus;
+      descFinal.innerText = "Process Complete";
+      iconFinal.className = s === 'approved' ? 'timeline-icon icon-success' : 'timeline-icon icon-danger';
+      iconFinal.innerHTML = s === 'approved' ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>' : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+    } 
+    else if (s === 'pending admin approval') {
+      // Review done, waiting on final
+      iconReview.className = 'timeline-icon icon-success';
+      iconReview.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+      document.getElementById('flow-reviewed').innerText = "Forwarded to Admin";
+      iconFinal.className = 'timeline-icon icon-current';
+      descFinal.innerText = "Current Step";
+    }
+    else {
+      // Still in review
+      iconReview.className = 'timeline-icon icon-current';
+      iconFinal.className = 'timeline-icon icon-done';
+    }
+
+    // 5. FETCH DOCUMENTS
+    const { data: docs, error: docsError } = await window.db.from('documents').select('*').eq('application_id', window.applicationId);
+    if (!docsError && docs && docs.length > 0) {
+      document.getElementById('tab-docs').innerText = `Documents (${docs.length})`;
+      let docsHtml = `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">`;
+      docs.forEach(doc => {
+        docsHtml += `
+          <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; text-align: center; background: #f9fafb;">
+            <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="#1d4ed8" stroke-width="2" style="margin-bottom:12px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            <div style="font-weight: 600; font-size: 13.5px; margin-bottom: 12px; color: #111827;">${doc.document_type}</div>
+            <a href="${doc.file_url}" target="_blank" class="btn btn-outline btn-sm" style="width:100%; justify-content:center;">View File</a>
+          </div>
+        `;
+      });
+      docsHtml += `</div>`;
+      const docsContainer = document.getElementById('content-docs');
+      docsContainer.innerHTML = docsHtml;
+      docsContainer.style.textAlign = 'left';
+      docsContainer.style.padding = '24px';
+    }
+
+    // 6. LOCK UI IF FINALIZED
+    const isStaffAndForwarded = (currentUserRole === 'SAO Staff' && s === 'pending admin approval');
+    if (s === 'approved' || s === 'disapproved' || s === 'rejected' || isStaffAndForwarded) {
+      document.getElementById('btn-approve').style.display = 'none';
+      if(document.getElementById('btn-disapprove')) document.getElementById('btn-disapprove').style.display = 'none';
+      document.getElementById('btn-clarify').style.display = 'none';
+      
+      const rmks = document.getElementById('decision-remarks');
+      rmks.value = app.remarks || `Application was ${currentStatus}. No additional remarks.`;
+      rmks.disabled = true;
+      rmks.style.background = '#f9fafb';
+    } else {
+       if(app.remarks && !app.remarks.includes('Email updates:')) {
+          document.getElementById('decision-remarks').value = app.remarks;
+       }
+    }
+
+    document.getElementById('loadingMessage').style.display = 'none';
+    document.getElementById('applicationContent').style.display = 'block';
+  };
+
+  // --- THE NEW UPDATE FUNCTION WITH INSERT LOGIC ---
+  window.updateApplicationStatus = async function(newStatus) {
+    const btnApprove = document.getElementById('btn-approve');
+    const btnDisapprove = document.getElementById('btn-disapprove');
+    const btnClarify = document.getElementById('btn-clarify');
+    const remarks = document.getElementById('decision-remarks').value;
+    
+    btnApprove.disabled = true;
+    if(btnDisapprove) btnDisapprove.disabled = true;
+    btnClarify.disabled = true;
+    
+    if(newStatus === 'Approved' || newStatus === 'Pending Admin Approval') btnApprove.innerText = 'Processing...';
+    if(newStatus === 'Disapproved' && btnDisapprove) btnDisapprove.innerText = 'Processing...';
+    if(newStatus === 'Needs Clarification') btnClarify.innerText = 'Processing...';
+
+    // 1. UPDATE THE APPLICATION TABLE
+    const { error: appError } = await window.db.from('applications')
+        .update({ status: newStatus, remarks: remarks })
+        .eq('id', window.applicationId);
+
+    if (appError) {
+      alert("Error updating application: " + appError.message);
+      btnApprove.disabled = false;
+      if(btnDisapprove) btnDisapprove.disabled = false;
+      btnClarify.disabled = false;
+      
+      btnApprove.innerText = (currentUserRole === 'SAO Staff') ? "Forward to Admin" : "Approve Application";
+      if(btnDisapprove) btnDisapprove.innerText = "Disapprove Application";
+      btnClarify.innerText = "Request Clarification";
+      return; // Stop here if updating the application failed
+    } 
+
+// 2. IF APPROVED, INSERT INTO ACTIVITIES TABLE
+if (newStatus === 'Approved') {
+    // Fetch the full app data so we know what to copy
+    const { data: appData } = await window.db.from('applications').select('*').eq('id', window.applicationId).single();
+    
+    if (appData) {
+        const newActivityData = {
+            title: appData.title,
+            type: appData.type,
+            organization: appData.organization,
+            activity_date: appData.start_date, // Maps start_date to activity_date
+            end_date: appData.end_date,        // NEW: Copies end date
+            start_time: appData.start_time,    // NEW: Copies start time
+            end_time: appData.end_time,        // NEW: Copies end time
+            venue: appData.venue,
+            participants: appData.participants,
+            status: 'Upcoming' // Default status when copied
+        };
+
+        const { error: actError } = await window.db.from('activities').insert([newActivityData]);
+        
+        if (actError) {
+            console.error("Failed to copy to activities:", actError);
+            alert("Application was approved, but failed to automatically copy to the Activities table.");
+        }
+    }
+}
+
+    alert(`Success! Application status changed to ${newStatus}.`);
+    if(newStatus === 'Needs Clarification') location.reload(); 
+    else window.location.href = "applications.html";
+    
+  };
+
+  window.loadApplicationDetails();
+}
+</script>
+
+<script src="js/sidebar.js"></script>
+<script src="js/topbar.js"></script>
+</body>
+</html>
