@@ -214,9 +214,20 @@
       }
   };
 
-  // Fire when page loads
-  document.addEventListener('DOMContentLoaded', () => {
-    window.checkAuth();
+  // --- BULLETPROOF INITIALIZATION ---
+  
+  // 1. Run immediately if the page is already loaded by the browser
+  if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', window.checkAuth);
+  } else {
+      window.checkAuth();
+  }
+
+  // 2. Force it to run again if you use the "Back" button or sidebar cache (BFCache)
+  window.addEventListener('pageshow', function(event) {
+      if (event.persisted) {
+          window.checkAuth();
+      }
   });
 </script>
 <script src="js/sidebar.js"></script>
