@@ -118,18 +118,30 @@
     window.loadAdminTemplates();
   };
 
-  // 1. Fetch current templates on page load
+  // 1. Fetch current templates on page load (WITH ERROR HANDLING)
   window.loadAdminTemplates = async function() {
+      const documentIds = ['status-checklist', 'status-report', 'status-cert', 'status-consent', 'status-pic'];
+
       try {
+          // Attempt to fetch data from Supabase
           const { data, error } = await window.db.from('requirements').select('*');
           
-          // Reset all to red first
-          const documentIds = ['status-checklist', 'status-report', 'status-cert', 'status-consent', 'status-pic'];
+          // If Supabase returns a specific database error (like missing table or RLS block)
+          if (error) {
+              console.error("Database Error:", error.message);
+              documentIds.forEach(id => {
+                  document.getElementById(id).innerHTML = `<span style="color: #ef4444; font-weight:600;">Error: ${error.message}</span>`;
+              });
+              return; // Stop running the rest of the code
+          }
+
+          // If no error, reset all statuses to "Missing" first
           documentIds.forEach(id => {
               document.getElementById(id).innerHTML = `<span style="color: #ef4444; font-weight:500;">Missing / Not uploaded</span>`;
           });
 
-          if (!error && data) {
+          // Check if data actually exists and apply the active links
+          if (data && data.length > 0) {
               data.forEach(req => {
                   let statusId = null;
                   if (req.document_name === "Off-Campus Checklist") statusId = 'status-checklist';
@@ -146,7 +158,11 @@
               });
           }
       } catch (err) {
-          console.error("Error loading templates:", err);
+          // If the network completely fails or times out
+          console.error("Network/JS Connection Error:", err);
+          documentIds.forEach(id => {
+              document.getElementById(id).innerHTML = `<span style="color: #ef4444; font-weight:600;">Connection Failed. Please refresh.</span>`;
+          });
       }
   };
 
