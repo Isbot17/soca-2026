@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -19,6 +18,7 @@
     <header class="topbar">
       <div class="topbar-left">
         <h1 style="margin: 0; font-size: 24px; color: #111827;">Manage Required Documents</h1>
+        <div class="breadcrumb"><a href="#">Dashboard</a><span class="sep">/</span><span class="current">Documents</span></div>
       </div>
     </header>
 
@@ -31,6 +31,11 @@
                     <h3>Required Documents & Forms</h3>
                     <p>Upload the blank official SVCI forms here. Once saved, download links will automatically appear in the Faculty's application form.</p>
                 </div>
+                <!-- Added a manual refresh button just in case! -->
+                <button class="btn btn-outline" style="font-size: 13px;" onclick="window.loadAdminTemplates()">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px;"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                    Refresh Status
+                </button>
             </div>
             
             <div class="card-body">
@@ -108,16 +113,6 @@
   const supabaseUrl = 'https://xhxwsjdtpbxosqwzmfsk.supabase.co';
   const supabaseKey = 'sb_publishable_CYvnSlv4LAbXLW0sNu_qeA_PNA6vhxU';
   if (!window.db) window.db = supabase.createClient(supabaseUrl, supabaseKey);
-
-  // Auth check 
-  window.checkAuth = function() {
-    const userStr = localStorage.getItem('currentUser');
-    if (!userStr) {
-      window.location.href = 'index.html'; 
-      return;
-    }
-    window.loadAdminTemplates();
-  };
 
   // 1. Fetch current templates on page load (WITH ERROR HANDLING)
   window.loadAdminTemplates = async function() {
@@ -207,21 +202,27 @@
       }
   };
 
-  // --- BULLETPROOF INITIALIZATION ---
-  
-  // 1. Run immediately if the page is already loaded by the browser
-  if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', window.checkAuth);
-  } else {
-      window.checkAuth();
-  }
+  // --- COLLISION-PROOF INITIALIZATION ---
+  // Renamed to avoid conflicts with global checkAuth functions in other files
+  window.initDocsPage = function() {
+    const userStr = localStorage.getItem('currentUser');
+    if (!userStr) {
+      window.location.href = 'index.html'; 
+      return;
+    }
+    window.loadAdminTemplates();
+  };
 
-  // 2. Force it to run again if you use the "Back" button or sidebar cache (BFCache)
+  // Execute immediately (since this script is at the bottom of the HTML structure)
+  window.initDocsPage();
+
+  // Protect against Safari / Mobile browser "Back Button" caching
   window.addEventListener('pageshow', function(event) {
       if (event.persisted) {
-          window.checkAuth();
+          window.initDocsPage();
       }
   });
+
 </script>
 <script src="js/sidebar.js"></script>
 <script src="js/topbar.js"></script>
