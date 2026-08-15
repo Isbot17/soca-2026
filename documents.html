@@ -123,24 +123,20 @@
       const documentIds = ['status-checklist', 'status-report', 'status-cert', 'status-consent', 'status-pic'];
 
       try {
-          // Attempt to fetch data from Supabase
           const { data, error } = await window.db.from('requirements').select('*');
           
-          // If Supabase returns a specific database error (like missing table or RLS block)
           if (error) {
               console.error("Database Error:", error.message);
               documentIds.forEach(id => {
                   document.getElementById(id).innerHTML = `<span style="color: #ef4444; font-weight:600;">Error: ${error.message}</span>`;
               });
-              return; // Stop running the rest of the code
+              return;
           }
 
-          // If no error, reset all statuses to "Missing" first
           documentIds.forEach(id => {
               document.getElementById(id).innerHTML = `<span style="color: #ef4444; font-weight:500;">Missing / Not uploaded</span>`;
           });
 
-          // Check if data actually exists and apply the active links
           if (data && data.length > 0) {
               data.forEach(req => {
                   let statusId = null;
@@ -158,7 +154,6 @@
               });
           }
       } catch (err) {
-          // If the network completely fails or times out
           console.error("Network/JS Connection Error:", err);
           documentIds.forEach(id => {
               document.getElementById(id).innerHTML = `<span style="color: #ef4444; font-weight:600;">Connection Failed. Please refresh.</span>`;
@@ -183,15 +178,12 @@
       const uniqueFileName = `template_${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
 
       try {
-          // Upload file to Supabase (Ensure you have a storage bucket named 'requirements' created in Supabase!)
           const { error: uploadError } = await window.db.storage.from('requirements').upload(uniqueFileName, file);
           if (uploadError) throw uploadError;
 
-          // Get the public URL
           const { data } = window.db.storage.from('requirements').getPublicUrl(uniqueFileName);
           const publicUrl = data.publicUrl;
 
-          // Update or Insert into database (Delete old one first to avoid duplicates)
           await window.db.from('requirements').delete().eq('document_name', docName);
           
           const { error: dbError } = await window.db.from('requirements').insert([{ 
@@ -202,8 +194,8 @@
           if (dbError) throw dbError;
 
           alert(`Successfully updated the template for: ${docName}`);
-          fileInput.value = ''; // clear input
-          window.loadAdminTemplates(); // refresh table
+          fileInput.value = ''; 
+          window.loadAdminTemplates(); 
 
       } catch (err) {
           console.error(err);
