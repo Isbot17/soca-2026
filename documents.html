@@ -25,14 +25,17 @@
     <main class="main-content">
       <div class="content">
         
+        <!-- SPA Bypass Trigger: Forces JS execution on dynamic sidebar loads -->
+        <img src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==" onload="if(typeof window.initDocsPage === 'function') window.initDocsPage();" style="display:none;">
+
         <div class="card">
             <div class="card-head">
                 <div>
                     <h3>Required Documents & Forms</h3>
                     <p>Upload the blank official SVCI forms here. Once saved, download links will automatically appear in the Faculty's application form.</p>
                 </div>
-                <!-- Added a manual refresh button just in case! -->
-                <button class="btn btn-outline" style="font-size: 13px;" onclick="window.loadAdminTemplates()">
+                <!-- Manual refresh button just in case! -->
+                <button class="btn btn-outline" style="font-size: 13px;" onclick="window.initDocsPage()">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px;"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
                     Refresh Status
                 </button>
@@ -110,119 +113,146 @@
 </div>
 
 <script>
-  const supabaseUrl = 'https://xhxwsjdtpbxosqwzmfsk.supabase.co';
-  const supabaseKey = 'sb_publishable_CYvnSlv4LAbXLW0sNu_qeA_PNA6vhxU';
-  if (!window.db) window.db = supabase.createClient(supabaseUrl, supabaseKey);
+  (function() {
+      const supabaseUrl = 'https://xhxwsjdtpbxosqwzmfsk.supabase.co';
+      const supabaseKey = 'sb_publishable_CYvnSlv4LAbXLW0sNu_qeA_PNA6vhxU';
+      if (!window.db) window.db = supabase.createClient(supabaseUrl, supabaseKey);
 
-  // 1. Fetch current templates on page load (WITH ERROR HANDLING)
-  window.loadAdminTemplates = async function() {
-      const documentIds = ['status-checklist', 'status-report', 'status-cert', 'status-consent', 'status-pic'];
+      // 1. The main fetching function
+      window.loadAdminTemplates = async function() {
+          const documentIds = ['status-checklist', 'status-report', 'status-cert', 'status-consent', 'status-pic'];
 
-      try {
-          const { data, error } = await window.db.from('requirements').select('*');
-          
-          if (error) {
-              console.error("Database Error:", error.message);
+          try {
+              const { data, error } = await window.db.from('requirements').select('*');
+              
+              if (error) {
+                  console.error("Database Error:", error.message);
+                  documentIds.forEach(id => {
+                      const el = document.getElementById(id);
+                      if (el) el.innerHTML = `<span style="color: #ef4444; font-weight:600;">Error: ${error.message}</span>`;
+                  });
+                  return;
+              }
+
+              // Reset to "Missing" first
               documentIds.forEach(id => {
-                  document.getElementById(id).innerHTML = `<span style="color: #ef4444; font-weight:600;">Error: ${error.message}</span>`;
+                  const el = document.getElementById(id);
+                  if (el) el.innerHTML = `<span style="color: #ef4444; font-weight:500;">Missing / Not uploaded</span>`;
               });
+
+              // Populate active links
+              if (data && data.length > 0) {
+                  data.forEach(req => {
+                      let statusId = null;
+                      if (req.document_name === "Off-Campus Checklist") statusId = 'status-checklist';
+                      if (req.document_name === "Report of Compliance") statusId = 'status-report';
+                      if (req.document_name === "Certificate of Compliance") statusId = 'status-cert';
+                      if (req.document_name === "Parents Consent") statusId = 'status-consent';
+                      if (req.document_name === "PIC Designation") statusId = 'status-pic';
+
+                      if (statusId && req.file_url) {
+                          const el = document.getElementById(statusId);
+                          if (el) {
+                              el.innerHTML = `
+                                <span style="color: #10b981; font-weight: 600;">✓ Active</span> 
+                                <a href="${req.file_url}" target="_blank" style="margin-left: 8px; font-size:12px; color:var(--primary); text-decoration:underline;">View File</a>`;
+                          }
+                      }
+                  });
+              }
+          } catch (err) {
+              console.error("Connection Error:", err);
+              documentIds.forEach(id => {
+                  const el = document.getElementById(id);
+                  if (el) el.innerHTML = `<span style="color: #ef4444; font-weight:600;">Connection Failed. Retrying...</span>`;
+              });
+          }
+      };
+
+      // 2. Upload function
+      window.uploadAdminTemplate = async function(btn, docName, inputId) {
+          const fileInput = document.getElementById(inputId);
+          
+          if (fileInput.files.length === 0) {
+              alert("Please select a file to upload first.");
               return;
+            }
+            
+          const originalText = btn.innerText;
+          btn.innerText = "Saving...";
+          btn.disabled = true;
+
+          const file = fileInput.files[0];
+          const uniqueFileName = `template_${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
+
+          try {
+              const { error: uploadError } = await window.db.storage.from('requirements').upload(uniqueFileName, file);
+              if (uploadError) throw uploadError;
+
+              const { data } = window.db.storage.from('requirements').getPublicUrl(uniqueFileName);
+              const publicUrl = data.publicUrl;
+
+              await window.db.from('requirements').delete().eq('document_name', docName);
+              
+              const { error: dbError } = await window.db.from('requirements').insert([{ 
+                  document_name: docName, 
+                  file_url: publicUrl 
+              }]);
+              
+              if (dbError) throw dbError;
+
+              alert(`Successfully updated the template for: ${docName}`);
+              fileInput.value = ''; 
+              window.loadAdminTemplates(); 
+
+          } catch (err) {
+              console.error(err);
+              alert("Failed to upload template: " + err.message);
+          } finally {
+              btn.innerText = originalText;
+              btn.disabled = false;
           }
+      };
 
-          documentIds.forEach(id => {
-              document.getElementById(id).innerHTML = `<span style="color: #ef4444; font-weight:500;">Missing / Not uploaded</span>`;
-          });
-
-          if (data && data.length > 0) {
-              data.forEach(req => {
-                  let statusId = null;
-                  if (req.document_name === "Off-Campus Checklist") statusId = 'status-checklist';
-                  if (req.document_name === "Report of Compliance") statusId = 'status-report';
-                  if (req.document_name === "Certificate of Compliance") statusId = 'status-cert';
-                  if (req.document_name === "Parents Consent") statusId = 'status-consent';
-                  if (req.document_name === "PIC Designation") statusId = 'status-pic';
-
-                  if (statusId && req.file_url) {
-                      document.getElementById(statusId).innerHTML = `
-                        <span style="color: #10b981; font-weight: 600;">✓ Active</span> 
-                        <a href="${req.file_url}" target="_blank" style="margin-left: 8px; font-size:12px; color:var(--primary); text-decoration:underline;">View File</a>`;
-                  }
-              });
+      // 3. Initialization Function
+      window.initDocsPage = function() {
+          const userStr = localStorage.getItem('currentUser');
+          if (!userStr) {
+            window.location.href = 'index.html'; 
+            return;
           }
-      } catch (err) {
-          console.error("Network/JS Connection Error:", err);
-          documentIds.forEach(id => {
-              document.getElementById(id).innerHTML = `<span style="color: #ef4444; font-weight:600;">Connection Failed. Please refresh.</span>`;
-          });
-      }
-  };
+          window.loadAdminTemplates();
+      };
 
-  // 2. Upload a new template
-  window.uploadAdminTemplate = async function(btn, docName, inputId) {
-      const fileInput = document.getElementById(inputId);
+      // --- THE BULLETPROOF AUTO-LOADER ---
       
-      if (fileInput.files.length === 0) {
-          alert("Please select a file to upload first.");
-          return;
-        }
-        
-      const originalText = btn.innerText;
-      btn.innerText = "Saving...";
-      btn.disabled = true;
+      // Fire once immediately
+      window.initDocsPage();
 
-      const file = fileInput.files[0];
-      const uniqueFileName = `template_${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
-
-      try {
-          const { error: uploadError } = await window.db.storage.from('requirements').upload(uniqueFileName, file);
-          if (uploadError) throw uploadError;
-
-          const { data } = window.db.storage.from('requirements').getPublicUrl(uniqueFileName);
-          const publicUrl = data.publicUrl;
-
-          await window.db.from('requirements').delete().eq('document_name', docName);
+      // Aggressive Retry Loop: Checks every 0.5 seconds if the text is still stuck on "Loading..."
+      // If it is stuck, it forces a fresh fetch. It stops trying after 3 seconds to save performance.
+      let retryCount = 0;
+      const forceFetchInterval = setInterval(() => {
+          const checkEl = document.getElementById('status-checklist');
           
-          const { error: dbError } = await window.db.from('requirements').insert([{ 
-              document_name: docName, 
-              file_url: publicUrl 
-          }]);
+          if (checkEl && checkEl.innerText.includes('Loading')) {
+              console.warn("Auto-fetching data (sidebar navigation detected)...");
+              window.initDocsPage();
+          }
           
-          if (dbError) throw dbError;
+          retryCount++;
+          // Clear interval if it succeeded OR if we reached 6 attempts
+          if (retryCount >= 6 || (checkEl && !checkEl.innerText.includes('Loading'))) {
+              clearInterval(forceFetchInterval);
+          }
+      }, 500);
 
-          alert(`Successfully updated the template for: ${docName}`);
-          fileInput.value = ''; 
-          window.loadAdminTemplates(); 
+      // Handle Safari / Mobile browser "Back Button" caching
+      window.addEventListener('pageshow', function(event) {
+          if (event.persisted) window.initDocsPage();
+      });
 
-      } catch (err) {
-          console.error(err);
-          alert("Failed to upload template: " + err.message);
-      } finally {
-          btn.innerText = originalText;
-          btn.disabled = false;
-      }
-  };
-
-  // --- COLLISION-PROOF INITIALIZATION ---
-  // Renamed to avoid conflicts with global checkAuth functions in other files
-  window.initDocsPage = function() {
-    const userStr = localStorage.getItem('currentUser');
-    if (!userStr) {
-      window.location.href = 'index.html'; 
-      return;
-    }
-    window.loadAdminTemplates();
-  };
-
-  // Execute immediately (since this script is at the bottom of the HTML structure)
-  window.initDocsPage();
-
-  // Protect against Safari / Mobile browser "Back Button" caching
-  window.addEventListener('pageshow', function(event) {
-      if (event.persisted) {
-          window.initDocsPage();
-      }
-  });
-
+  })();
 </script>
 <script src="js/sidebar.js"></script>
 <script src="js/topbar.js"></script>
