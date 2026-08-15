@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOCA · Manage Documents</title>
+<link rel="icon" type="image/jpeg" href="images/svc-logo.jpg">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<div class="app">
+  
+  <div id="sidebar-placeholder"></div>
+
+  <div class="main-wrapper">
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 style="margin: 0; font-size: 24px; color: #111827;">Manage Required Documents</h1>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <div class="content">
+        
+        <div class="card">
+            <div class="card-head">
+                <div>
+                    <h3>Required Documents & Forms</h3>
+                    <p>Upload the blank official SVCI forms here. Once saved, download links will automatically appear in the Faculty's application form.</p>
+                </div>
+            </div>
+            
+            <div class="card-body">
+                <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid var(--border); text-align: left; background: #f9fafb;">
+                            <th style="padding: 14px;">Document Name</th>
+                            <th style="padding: 14px;">Current Status</th>
+                            <th style="padding: 14px;">Upload New File (.pdf, .doc)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="admin-templates-table">
+                        
+                        <!-- 1. Checklist -->
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 16px 14px; font-weight: 600;">Off-Campus Checklist</td>
+                            <td style="padding: 16px 14px;" id="status-checklist"><span style="color:#6b7280;">Loading...</span></td>
+                            <td style="padding: 16px 14px; display: flex; gap: 8px;">
+                                <input type="file" id="upload-checklist" accept=".pdf,.doc,.docx" style="font-size: 12px; max-width: 200px;">
+                                <button class="btn btn-outline" style="padding: 4px 12px; font-size: 12px; color: var(--primary); border-color: var(--primary);" onclick="window.uploadAdminTemplate(this, 'Off-Campus Checklist', 'upload-checklist')">Save</button>
+                            </td>
+                        </tr>
+                        
+                        <!-- 2. Report -->
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 16px 14px; font-weight: 600;">Report of Compliance</td>
+                            <td style="padding: 16px 14px;" id="status-report"><span style="color:#6b7280;">Loading...</span></td>
+                            <td style="padding: 16px 14px; display: flex; gap: 8px;">
+                                <input type="file" id="upload-report" accept=".pdf,.doc,.docx" style="font-size: 12px; max-width: 200px;">
+                                <button class="btn btn-outline" style="padding: 4px 12px; font-size: 12px; color: var(--primary); border-color: var(--primary);" onclick="window.uploadAdminTemplate(this, 'Report of Compliance', 'upload-report')">Save</button>
+                            </td>
+                        </tr>
+                        
+                        <!-- 3. Certificate -->
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 16px 14px; font-weight: 600;">Certificate of Compliance</td>
+                            <td style="padding: 16px 14px;" id="status-cert"><span style="color:#6b7280;">Loading...</span></td>
+                            <td style="padding: 16px 14px; display: flex; gap: 8px;">
+                                <input type="file" id="upload-cert" accept=".pdf,.doc,.docx" style="font-size: 12px; max-width: 200px;">
+                                <button class="btn btn-outline" style="padding: 4px 12px; font-size: 12px; color: var(--primary); border-color: var(--primary);" onclick="window.uploadAdminTemplate(this, 'Certificate of Compliance', 'upload-cert')">Save</button>
+                            </td>
+                        </tr>
+                        
+                        <!-- 4. Consent -->
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 16px 14px; font-weight: 600;">Parents Consent</td>
+                            <td style="padding: 16px 14px;" id="status-consent"><span style="color:#6b7280;">Loading...</span></td>
+                            <td style="padding: 16px 14px; display: flex; gap: 8px;">
+                                <input type="file" id="upload-consent" accept=".pdf,.doc,.docx" style="font-size: 12px; max-width: 200px;">
+                                <button class="btn btn-outline" style="padding: 4px 12px; font-size: 12px; color: var(--primary); border-color: var(--primary);" onclick="window.uploadAdminTemplate(this, 'Parents Consent', 'upload-consent')">Save</button>
+                            </td>
+                        </tr>
+                        
+                        <!-- 5. PIC Designation -->
+                        <tr style="border-bottom: 1px solid var(--border);">
+                            <td style="padding: 16px 14px; font-weight: 600;">PIC Designation</td>
+                            <td style="padding: 16px 14px;" id="status-pic"><span style="color:#6b7280;">Loading...</span></td>
+                            <td style="padding: 16px 14px; display: flex; gap: 8px;">
+                                <input type="file" id="upload-pic" accept=".pdf,.doc,.docx" style="font-size: 12px; max-width: 200px;">
+                                <button class="btn btn-outline" style="padding: 4px 12px; font-size: 12px; color: var(--primary); border-color: var(--primary);" onclick="window.uploadAdminTemplate(this, 'PIC Designation', 'upload-pic')">Save</button>
+                            </td>
+                        </tr>
+
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+  const supabaseUrl = 'https://xhxwsjdtpbxosqwzmfsk.supabase.co';
+  const supabaseKey = 'sb_publishable_CYvnSlv4LAbXLW0sNu_qeA_PNA6vhxU';
+  if (!window.db) window.db = supabase.createClient(supabaseUrl, supabaseKey);
+
+  // Auth check 
+  window.checkAuth = function() {
+    const userStr = localStorage.getItem('currentUser');
+    if (!userStr) {
+      window.location.href = 'index.html'; 
+      return;
+    }
+    window.loadAdminTemplates();
+  };
+
+  // 1. Fetch current templates on page load
+  window.loadAdminTemplates = async function() {
+      try {
+          const { data, error } = await window.db.from('requirements').select('*');
+          
+          // Reset all to red first
+          const documentIds = ['status-checklist', 'status-report', 'status-cert', 'status-consent', 'status-pic'];
+          documentIds.forEach(id => {
+              document.getElementById(id).innerHTML = `<span style="color: #ef4444; font-weight:500;">Missing / Not uploaded</span>`;
+          });
+
+          if (!error && data) {
+              data.forEach(req => {
+                  let statusId = null;
+                  if (req.document_name === "Off-Campus Checklist") statusId = 'status-checklist';
+                  if (req.document_name === "Report of Compliance") statusId = 'status-report';
+                  if (req.document_name === "Certificate of Compliance") statusId = 'status-cert';
+                  if (req.document_name === "Parents Consent") statusId = 'status-consent';
+                  if (req.document_name === "PIC Designation") statusId = 'status-pic';
+
+                  if (statusId && req.file_url) {
+                      document.getElementById(statusId).innerHTML = `
+                        <span style="color: #10b981; font-weight: 600;">✓ Active</span> 
+                        <a href="${req.file_url}" target="_blank" style="margin-left: 8px; font-size:12px; color:var(--primary); text-decoration:underline;">View File</a>`;
+                  }
+              });
+          }
+      } catch (err) {
+          console.error("Error loading templates:", err);
+      }
+  };
+
+  // 2. Upload a new template
+  window.uploadAdminTemplate = async function(btn, docName, inputId) {
+      const fileInput = document.getElementById(inputId);
+      
+      if (fileInput.files.length === 0) {
+          alert("Please select a file to upload first.");
+          return;
+        }
+        
+      const originalText = btn.innerText;
+      btn.innerText = "Saving...";
+      btn.disabled = true;
+
+      const file = fileInput.files[0];
+      const uniqueFileName = `template_${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
+
+      try {
+          // Upload file to Supabase (Ensure you have a storage bucket named 'requirements' created in Supabase!)
+          const { error: uploadError } = await window.db.storage.from('requirements').upload(uniqueFileName, file);
+          if (uploadError) throw uploadError;
+
+          // Get the public URL
+          const { data } = window.db.storage.from('requirements').getPublicUrl(uniqueFileName);
+          const publicUrl = data.publicUrl;
+
+          // Update or Insert into database (Delete old one first to avoid duplicates)
+          await window.db.from('requirements').delete().eq('document_name', docName);
+          
+          const { error: dbError } = await window.db.from('requirements').insert([{ 
+              document_name: docName, 
+              file_url: publicUrl 
+          }]);
+          
+          if (dbError) throw dbError;
+
+          alert(`Successfully updated the template for: ${docName}`);
+          fileInput.value = ''; // clear input
+          window.loadAdminTemplates(); // refresh table
+
+      } catch (err) {
+          console.error(err);
+          alert("Failed to upload template: " + err.message);
+      } finally {
+          btn.innerText = originalText;
+          btn.disabled = false;
+      }
+  };
+
+  // Fire when page loads
+  document.addEventListener('DOMContentLoaded', () => {
+    window.checkAuth();
+  });
+</script>
+<script src="js/sidebar.js"></script>
+<script src="js/topbar.js"></script>
+</body>
+</html>
